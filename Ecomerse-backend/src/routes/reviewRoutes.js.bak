@@ -1,0 +1,27 @@
+const express = require('express');
+const router = express.Router();
+const { protect, admin } = require('../middleware/auth');
+const {
+  addReview,
+  getReviews,
+  updateReview,
+  deleteReview,
+  markHelpful,
+  addReply,
+  moderateReview
+} = require('../controllers/reviewController');
+
+// Public routes
+router.get('/:productId', getReviews);
+
+// Protected routes
+router.post('/:productId', protect, addReview);
+router.put('/:id', protect, updateReview);
+router.delete('/:id', protect, deleteReview);
+router.post('/:id/helpful', protect, markHelpful);
+router.post('/:id/reply', protect, addReply);
+
+// Admin routes
+router.put('/:id/moderate', protect, admin, moderateReview);
+
+module.exports = router;

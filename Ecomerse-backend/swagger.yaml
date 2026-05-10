@@ -1,0 +1,587 @@
+openapi: 3.0.0
+info:
+  title: E-commerce Backend API
+  version: "1.0"
+  description: API documentation for the e-commerce backend
+servers:
+  - url: http://localhost:5000
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+        token:
+          type: string
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        categoryId:
+          type: integer
+        stock:
+          type: number
+        images:
+          type: array
+          items:
+            type: string
+        averageRating:
+          type: number
+    Cart:
+      type: object
+      properties:
+        userId:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+        totalPrice:
+          type: number
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        items:
+          type: array
+        totalAmount:
+          type: number
+        status:
+          type: string
+        paymentMethod:
+          type: string
+        shippingAddress:
+          type: string
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        productId:
+          type: integer
+        rating:
+          type: number
+        comment:
+          type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Bad request
+  /api/auth/login:
+    post:
+      summary: Authenticate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  token:
+                    type: string
+                  verifyToken:
+                    type: string
+        "401":
+          description: Unauthorized
+  /api/auth/forgot-password:
+    post:
+      summary: Generate password reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+      responses:
+        "200":
+          description: Token generated
+  /api/auth/reset-password/{token}:
+    post:
+      summary: Reset password using token
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                password:
+                  type: string
+      responses:
+        "200":
+          description: Password updated
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized or expired token
+  /api/auth/verify/{token}:
+    get:
+      summary: Verify email address
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified
+        "400":
+          description: Bad request
+        "401":
+          description: Invalid or expired token
+
+  /api/users/profile:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get user profile
+      responses:
+        "200":
+          description: OK
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/users/orders:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get user's orders
+      responses:
+        "200":
+          description: OK
+
+  /api/products:
+    get:
+      summary: Get all products
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          schema:
+            type: number
+        - name: maxPrice
+          in: query
+          schema:
+            type: number
+      responses:
+        "200":
+          description: OK
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create product (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        "201":
+          description: Created
+  /api/products/{id}:
+    get:
+      summary: Get product by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update product (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Product"
+      responses:
+        "200":
+          description: OK
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Delete product (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/products/search:
+    get:
+      summary: Search products
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/cart:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get current user's cart
+      responses:
+        "200":
+          description: OK
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Clear cart
+      responses:
+        "200":
+          description: OK
+  /api/cart/items:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Add item to cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                productId:
+                  type: string
+                quantity:
+                  type: integer
+      responses:
+        "200":
+          description: OK
+  /api/cart/items/{id}:
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update item quantity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quantity:
+                  type: integer
+      responses:
+        "200":
+          description: OK
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Remove item from cart
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/orders:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create order from cart
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentMethod:
+                  type: string
+                shippingAddress:
+                  type: string
+      responses:
+        "201":
+          description: Created
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get all orders for user
+      responses:
+        "200":
+          description: OK
+  /api/orders/{id}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get order by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Cancel order (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/orders/{id}/status:
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update order status (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/reviews/{productId}:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Add review to product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                comment:
+                  type: string
+      responses:
+        "201":
+          description: Created
+    get:
+      summary: Get reviews for product
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+  /api/reviews/{id}:
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                comment:
+                  type: string
+      responses:
+        "200":
+          description: OK
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Delete review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/users:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get all users (admin)
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/orders:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get all orders (admin)
+      responses:
+        "200":
+          description: OK
+
+  /api/admin/stats:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get admin statistics
+      responses:
+        "200":
+          description: OK

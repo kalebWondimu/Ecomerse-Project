@@ -1,0 +1,15 @@
+
+# Environment files
+.env
+.env.local
+.env.production
+.env.development
+.env.staging
+
+# Backend environment
+Ecomerse-backend/.env
+Ecomerse-backend/.env.*
+
+# Frontend environment
+ecommerce-frontend/.env
+ecommerce-frontend/.env.*
