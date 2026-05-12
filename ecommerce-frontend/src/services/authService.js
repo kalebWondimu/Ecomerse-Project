@@ -6,17 +6,7 @@ const authService = {
       const response = await api.post('/auth/register', userData);
       const data = response.data;
       
-      if (data.token) {
-        localStorage.setItem('token', data.token);
-        const user = {
-          id: data.id,
-          name: data.name,
-          email: data.email,
-          role: data.role || 'user' 
-        };
-        localStorage.setItem('user', JSON.stringify(user));
-      }
-      
+      // Don't store token yet - user needs to verify OTP first
       return data;
     } catch (error) {
       console.error('Register error:', error.response?.data || error.message);
@@ -61,6 +51,39 @@ const authService = {
   verifyEmail: async (token) => {
     const response = await api.get(`/auth/verify/${token}`);
     return response.data;
+  },
+
+  verifyOTP: async (otpData) => {
+    try {
+      const response = await api.post('/auth/verify-otp', otpData);
+      const data = response.data;
+
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        const user = {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          role: data.role || 'user'
+        };
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+
+      return data;
+    } catch (error) {
+      console.error('OTP verification error:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  resendOTP: async (emailData) => {
+    try {
+      const response = await api.post('/auth/resend-otp', emailData);
+      return response.data;
+    } catch (error) {
+      console.error('Resend OTP error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   getProfile: async () => {

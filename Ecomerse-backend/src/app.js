@@ -10,7 +10,7 @@ dotenv.config();
 // use PostgreSQL instead of MongoDB
 connectPostgres().then(() => {
   const { sequelize } = require('./config/postgres');
-  sequelize.sync(); // ensure tables are created
+  sequelize.sync(); // ensure tables are created without altering enum schema
 });
 
 const app = express();

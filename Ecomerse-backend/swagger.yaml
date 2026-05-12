@@ -22,10 +22,32 @@ components:
           type: string
         email:
           type: string
+        phone:
+          type: string
+          nullable: true
         role:
           type: string
         token:
           type: string
+        isVerified:
+          type: boolean
+    OTPVerification:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+          description: 6-digit OTP code
+    OTPResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    Product:
     Product:
       type: object
       properties:
@@ -95,7 +117,7 @@ security:
 paths:
   /api/auth/register:
     post:
-      summary: Register a new user
+      summary: Register a new user with OTP verification
       requestBody:
         required: true
         content:
@@ -107,13 +129,33 @@ paths:
                   type: string
                 email:
                   type: string
+                  format: email
                 password:
                   type: string
+                  minLength: 6
       responses:
         "201":
-          description: Created
+          description: Registration successful, OTP sent to email
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  id:
+                    type: integer
+                  name:
+                    type: string
+                  email:
+                    type: string
+                  phone:
+                    type: string
+                    nullable: true
+                  isVerified:
+                    type: boolean
         "400":
-          description: Bad request
+          description: Bad request - User already exists or invalid data
   /api/auth/login:
     post:
       summary: Authenticate user
@@ -148,6 +190,50 @@ paths:
                     type: string
         "401":
           description: Unauthorized
+  /api/auth/verify-otp:
+    post:
+      summary: Verify user email with OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerification'
+      responses:
+        "200":
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        "400":
+          description: Bad request - Invalid OTP or expired
+        "404":
+          description: User not found
+  /api/auth/resend-otp:
+    post:
+      summary: Resend OTP verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPResponse'
+        "400":
+          description: Bad request
+        "404":
+          description: User not found
   /api/auth/forgot-password:
     post:
       summary: Generate password reset token

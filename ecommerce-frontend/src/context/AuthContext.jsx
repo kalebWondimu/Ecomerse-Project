@@ -47,19 +47,37 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       const data = await authService.register(userData);
+      // Don't set user yet - wait for OTP verification
+      return data;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  const verifyOTP = async (otpData) => {
+    try {
+      const data = await authService.verifyOTP(otpData);
 
       // Create user object from the response
-      const userDataObj = {
+      const userData = {
         id: data.id,
         name: data.name,
         email: data.email,
         role: data.role || "user",
       };
 
-      setUser(userDataObj);
-      return { user: userDataObj, token: data.token };
+      setUser(userData);
+      return { user: userData, token: data.token };
     } catch (error) {
-      setUser(null);
+      throw error;
+    }
+  };
+
+  const resendOTP = async (emailData) => {
+    try {
+      const data = await authService.resendOTP(emailData);
+      return data;
+    } catch (error) {
       throw error;
     }
   };
@@ -76,6 +94,8 @@ export const AuthProvider = ({ children }) => {
     isAdmin: user?.role === "admin",
     login,
     register,
+    verifyOTP,
+    resendOTP,
     logout,
   };
 

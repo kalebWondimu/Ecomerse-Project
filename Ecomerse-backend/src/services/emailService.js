@@ -188,6 +188,113 @@ const emailService = {
       console.error('Error sending welcome email:', error);
       throw error;
     }
+  },
+
+  // Send OTP verification email
+  sendOTPVerificationEmail: async (email, otp) => {
+    const mailOptions = {
+      from: `"E-Store Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Verify Your Email - E-Store',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    line-height: 1.6;
+                    color: #333;
+                    margin: 0;
+                    padding: 0;
+                }
+                .container {
+                    max-width: 600px;
+                    margin: 20px auto;
+                    padding: 20px;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                }
+                .header {
+                    text-align: center;
+                    padding: 20px 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border-radius: 8px 8px 0 0;
+                    margin: -20px -20px 20px -20px;
+                }
+                .header h1 {
+                    color: white;
+                    margin: 0;
+                    font-size: 24px;
+                }
+                .content {
+                    padding: 20px;
+                }
+                .otp-code {
+                    text-align: center;
+                    font-size: 32px;
+                    font-weight: bold;
+                    letter-spacing: 8px;
+                    color: #667eea;
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                    border: 2px dashed #667eea;
+                }
+                .footer {
+                    text-align: center;
+                    padding: 20px;
+                    color: #666;
+                    font-size: 12px;
+                    border-top: 1px solid #e0e0e0;
+                }
+                .warning {
+                    color: #e53e3e;
+                    font-size: 14px;
+                    margin-top: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🔐 Email Verification</h1>
+                </div>
+                <div class="content">
+                    <p>Hello,</p>
+                    <p>Thank you for registering with E-Store! To complete your registration, please verify your email address using the OTP code below:</p>
+
+                    <div class="otp-code">${otp}</div>
+
+                    <p>This code will expire in 10 minutes for security reasons.</p>
+
+                    <p class="warning">⚠️ If you didn't create an account with E-Store, please ignore this email.</p>
+
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+                    <p style="font-size: 14px;">For security, never share this code with anyone. Our team will never ask for your verification code.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; ${new Date().getFullYear()} E-Store. All rights reserved.</p>
+                    <p>This is an automated message, please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `,
+      text: `Email Verification\n\nHello,\n\nThank you for registering with E-Store! Your OTP verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account, please ignore this email.`
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending OTP email:', error);
+      throw error;
+    }
   }
 };
 
