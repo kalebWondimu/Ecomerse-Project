@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import orderService from "../services/orderService";
+import paymentService from "../services/paymentService";
 import userService from "../services/userService";
 import toast from "react-hot-toast";
 import {
@@ -167,26 +168,67 @@ const CheckoutPage = () => {
       setProcessing(true);
       await saveShippingToProfile();
 
-      // Format shipping address as a single string
       const shippingAddressString = `${shippingInfo.address}, ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.zipCode}, ${shippingInfo.country}`;
-
       const orderData = {
         paymentMethod: paymentMethod,
         shippingAddress: shippingAddressString,
       };
+
       const response = await orderService.createOrder(orderData);
       const newOrderId = response.id;
+      const paymentAmount = parseFloat(total.toFixed(2));
 
-      setOrderPlaced(true);
-      await clearCart();
-      toast.success("Order placed successfully!");
+      if (paymentMethod === 'telebirr') {
+        const paymentResponse = await paymentService.initiateTelebirr({
+          orderId: newOrderId,
+          amount: paymentAmount,
+          phoneNumber: shippingInfo.phone,
+        });
+        setOrderPlaced(true);
+        await clearCart();
+        toast.success(paymentResponse.message || 'Telebirr payment started');
+        if (paymentResponse.paymentUrl) {
+          window.location.href = paymentResponse.paymentUrl;
+          return;
+        }
+      } else if (paymentMethod === 'chapa') {
+        const paymentResponse = await paymentService.initiateChapa({
+          orderId: newOrderId,
+          amount: paymentAmount,
+          email: shippingInfo.email,
+        });
+        setOrderPlaced(true);
+        await clearCart();
+        toast.success(paymentResponse.message || 'Chapa checkout initiated');
+        if (paymentResponse.checkoutUrl) {
+          window.location.href = paymentResponse.checkoutUrl;
+          return;
+        }
+      } else if (paymentMethod === 'cbe') {
+        const paymentResponse = await paymentService.initiateCBE({
+          orderId: newOrderId,
+          amount: paymentAmount,
+          accountNumber: shippingInfo.phone,
+        });
+        setOrderPlaced(true);
+        await clearCart();
+        toast.success(paymentResponse.message || 'CBE bank transfer initiated');
+        navigate(`/order-confirmation/${newOrderId}`);
+        return;
+      } else {
+        setOrderPlaced(true);
+        await clearCart();
+        toast.success('Order placed successfully!');
+        navigate(`/order-confirmation/${newOrderId}`);
+        return;
+      }
 
       navigate(`/order-confirmation/${newOrderId}`);
     } catch (error) {
-      console.error("Checkout error:", error);
+      console.error('Checkout error:', error);
       toast.error(
         error.response?.data?.message ||
-          "Failed to place order. Please try again.",
+          'Failed to place order. Please try again.',
       );
       setProcessing(false);
     }
