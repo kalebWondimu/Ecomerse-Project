@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   NavLink,
+  Link,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -20,6 +21,9 @@ import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ProductsPage from "./pages/ProductsPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
+import FAQPage from "./pages/FAQPage";
 
 // Protected Pages
 import CartPage from "./pages/CartPage";
@@ -149,19 +153,19 @@ const Footer = () => {
             <h4 className="font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm text-gray-500">
               <li>
-                <a href="/about" className="hover:text-primary-600">
+                <Link to="/about" className="hover:text-primary-600">
                   About Us
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/contact" className="hover:text-primary-600">
+                <Link to="/contact" className="hover:text-primary-600">
                   Contact
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/faq" className="hover:text-primary-600">
+                <Link to="/faq" className="hover:text-primary-600">
                   FAQ
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -169,41 +173,56 @@ const Footer = () => {
             <h4 className="font-semibold mb-4">Categories</h4>
             <ul className="space-y-2 text-sm text-gray-500">
               <li>
-                <a
-                  href="/products?category=electronics"
+                <Link
+                  to="/products?category=Electronics"
                   className="hover:text-primary-600"
                 >
                   Electronics
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/products?category=clothing"
+                <Link
+                  to="/products?category=Clothing"
                   className="hover:text-primary-600"
                 >
                   Clothing
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/products?category=books"
+                <Link
+                  to="/products?category=Books"
                   className="hover:text-primary-600"
                 >
                   Books
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Follow Us</h4>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-400 hover:text-primary-600">
+              <a
+                href="https://www.facebook.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-gray-400 hover:text-primary-600"
+              >
                 Facebook
               </a>
-              <a href="#" className="text-gray-400 hover:text-primary-600">
+              <a
+                href="https://www.instagram.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-gray-400 hover:text-primary-600"
+              >
                 Instagram
               </a>
-              <a href="#" className="text-gray-400 hover:text-primary-600">
+              <a
+                href="https://www.twitter.com"
+                target="_blank"
+                rel="noreferrer"
+                className="text-gray-400 hover:text-primary-600"
+              >
                 Twitter
               </a>
             </div>
@@ -272,6 +291,9 @@ function App() {
                 <Route path="/verify/:token" element={<VerifyEmailPage />} />
                 <Route path="/products" element={<ProductsPage />} />
                 <Route path="/products/:id" element={<ProductDetailPage />} />
+                <Route path="/about" element={<AboutPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/faq" element={<FAQPage />} />
 
                 {/* Protected User Routes */}
                 <Route

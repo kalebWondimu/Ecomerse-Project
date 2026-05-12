@@ -9,9 +9,17 @@ const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const normalizeCategory = (value) => {
+    if (!value) return "all";
+    const normalized = value.toString().toLowerCase();
+    if (normalized === "electronics") return "Electronics";
+    if (normalized === "clothing") return "Clothing";
+    if (normalized === "books") return "Books";
+    return "all";
+  };
   const [selectedCategory, setSelectedCategory] = useState(
-    searchParams.get("category") || "all",
+    normalizeCategory(searchParams.get("category")),
   );
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [sortBy, setSortBy] = useState("newest");
@@ -25,11 +33,7 @@ const ProductsPage = () => {
 
   useEffect(() => {
     const categoryFromUrl = searchParams.get("category");
-    if (categoryFromUrl) {
-      setSelectedCategory(categoryFromUrl);
-    } else {
-      setSelectedCategory("all");
-    }
+    setSelectedCategory(normalizeCategory(categoryFromUrl));
   }, [searchParams]);
 
   useEffect(() => {
@@ -82,11 +86,24 @@ const ProductsPage = () => {
     setProducts(filtered);
   };
 
+  const handleCategoryChange = (value) => {
+    const normalized = normalizeCategory(value);
+    setSelectedCategory(normalized);
+    const params = new URLSearchParams(searchParams);
+    if (normalized === "all") {
+      params.delete("category");
+    } else {
+      params.set("category", normalized);
+    }
+    setSearchParams(params);
+  };
+
   const clearFilters = () => {
     setSearchTerm("");
     setSelectedCategory("all");
     setPriceRange({ min: "", max: "" });
     setSortBy("newest");
+    setSearchParams({});
     fetchProducts();
   };
 
@@ -167,7 +184,7 @@ const ProductsPage = () => {
                     name="category"
                     value="all"
                     checked={selectedCategory === "all"}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    onChange={() => handleCategoryChange("all")}
                     className="mr-2"
                   />
                   All Categories
@@ -179,7 +196,7 @@ const ProductsPage = () => {
                       name="category"
                       value={category}
                       checked={selectedCategory === category}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      onChange={() => handleCategoryChange(category)}
                       className="mr-2"
                     />
                     {category}

@@ -295,6 +295,37 @@ const emailService = {
       console.error('Error sending OTP email:', error);
       throw error;
     }
+  },
+
+  sendContactEmail: async ({ name, email, subject, message }) => {
+    const supportEmail = process.env.CONTACT_EMAIL || process.env.EMAIL_USER;
+    if (!supportEmail) {
+      throw new Error('Support email address is not configured.');
+    }
+
+    const mailOptions = {
+      from: `"E-Store Contact Form" <${process.env.EMAIL_USER}>`,
+      to: supportEmail,
+      replyTo: email,
+      subject: `Contact form submission: ${subject}`,
+      html: `
+        <h2>New contact request</h2>
+        <p><strong>Name:</strong> ${name}</p>
+        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong></p>
+        <p>${message.replace(/\n/g, '<br />')}</p>
+      `,
+      text: `New contact request\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject}\n\nMessage:\n${message}`
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending contact email:', error);
+      throw error;
+    }
   }
 };
 
