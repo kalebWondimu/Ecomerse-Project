@@ -12,8 +12,9 @@ exports.createProduct = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, category, minPrice, maxPrice } = req.query;
+    const { page = 1, limit = 10, search, category, minPrice, maxPrice, sort = 'newest' } = req.query;
     const where = {};
+    let order = [['createdAt', 'DESC']];
     
     if (search) {
       where.name = { [Op.iLike]: `%${search}%` };
@@ -29,11 +30,28 @@ exports.getProducts = async (req, res) => {
       if (maxPrice) where.price[Op.lte] = parseFloat(maxPrice);
     }
     
+    // Apply sorting
+    switch(sort) {
+      case 'price_low':
+        order = [['price', 'ASC']];
+        break;
+      case 'price_high':
+        order = [['price', 'DESC']];
+        break;
+      case 'popular':
+        order = [['averageRating', 'DESC']];
+        break;
+      case 'newest':
+      default:
+        order = [['createdAt', 'DESC']];
+        break;
+    }
+    
     const products = await Product.findAll({
       where,
       offset: (parseInt(page) - 1) * parseInt(limit),
       limit: parseInt(limit),
-      order: [['createdAt', 'DESC']]
+      order
     });
     
     const totalCount = await Product.count({ where });

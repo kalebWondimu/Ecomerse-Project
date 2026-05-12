@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import orderService from "../services/orderService";
+import userService from "../services/userService";
 import toast from "react-hot-toast";
 import {
   FiTruck,
@@ -36,7 +37,7 @@ const CheckoutPage = () => {
     city: "",
     state: "",
     zipCode: "",
-    country: "United States",
+    country: "Ethiopia",
   });
 
   const [paymentInfo, setPaymentInfo] = useState({
@@ -46,14 +47,37 @@ const CheckoutPage = () => {
     cvv: "",
   });
 
-  s;
+  const [paymentMethod, setPaymentMethod] = useState("card");
+
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await userService.getProfile();
+        if (profile) {
+          setShippingInfo((prev) => ({
+            fullName: profile.name || prev.fullName,
+            email: profile.email || prev.email,
+            phone: profile.phone || prev.phone,
+            address: profile.address || prev.address,
+            city: profile.city || prev.city,
+            state: profile.state || prev.state,
+            zipCode: profile.zipCode || prev.zipCode,
+            country: profile.country || prev.country,
+          }));
+        }
+      } catch (error) {
+        console.error("Could not load profile for checkout", error);
+      }
+    };
+
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
+
+    fetchProfile();
 
     if (!orderPlaced && !loading && cart) {
       if (!cart.items || cart.items.length === 0) {
@@ -84,26 +108,52 @@ const CheckoutPage = () => {
 
   const validatePayment = () => {
     const newErrors = {};
-    if (!paymentInfo.cardNumber)
-      newErrors.cardNumber = "Card number is required";
-    else if (paymentInfo.cardNumber.replace(/\s/g, "").length < 16) {
-      newErrors.cardNumber = "Card number must be 16 digits";
+
+    if (paymentMethod === "card") {
+      if (!paymentInfo.cardNumber)
+        newErrors.cardNumber = "Card number is required";
+      else if (paymentInfo.cardNumber.replace(/\s/g, "").length < 16) {
+        newErrors.cardNumber = "Card number must be 16 digits";
+      }
+      if (!paymentInfo.cardName)
+        newErrors.cardName = "Name on card is required";
+      if (!paymentInfo.expiry) newErrors.expiry = "Expiry date is required";
+      else if (!/^\d{2}\/\d{2}$/.test(paymentInfo.expiry)) {
+        newErrors.expiry = "Expiry must be MM/YY";
+      }
+      if (!paymentInfo.cvv) newErrors.cvv = "CVV is required";
+      else if (paymentInfo.cvv.length < 3)
+        newErrors.cvv = "CVV must be 3 digits";
+    } else if (paymentMethod === "telebirr" || paymentMethod === "chapa") {
+      if (!shippingInfo.phone) newErrors.phone = "Phone number is required";
     }
-    if (!paymentInfo.cardName) newErrors.cardName = "Name on card is required";
-    if (!paymentInfo.expiry) newErrors.expiry = "Expiry date is required";
-    else if (!/^\d{2}\/\d{2}$/.test(paymentInfo.expiry)) {
-      newErrors.expiry = "Expiry must be MM/YY";
-    }
-    if (!paymentInfo.cvv) newErrors.cvv = "CVV is required";
-    else if (paymentInfo.cvv.length < 3) newErrors.cvv = "CVV must be 3 digits";
+    // CBE might require account number or other details, but for now we'll keep it simple
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleShippingSubmit = (e) => {
+  const saveShippingToProfile = async () => {
+    try {
+      await userService.updateProfile({
+        name: shippingInfo.fullName,
+        email: shippingInfo.email,
+        phone: shippingInfo.phone,
+        address: shippingInfo.address,
+        city: shippingInfo.city,
+        state: shippingInfo.state,
+        zipCode: shippingInfo.zipCode,
+        country: shippingInfo.country,
+      });
+    } catch (error) {
+      console.error("Failed to save checkout shipping info to profile", error);
+    }
+  };
+
+  const handleShippingSubmit = async (e) => {
     e.preventDefault();
     if (validateShipping()) {
+      await saveShippingToProfile();
       setCurrentStep(2);
       setErrors({});
     }
@@ -115,12 +165,13 @@ const CheckoutPage = () => {
 
     try {
       setProcessing(true);
+      await saveShippingToProfile();
 
       // Format shipping address as a single string
       const shippingAddressString = `${shippingInfo.address}, ${shippingInfo.city}, ${shippingInfo.state} ${shippingInfo.zipCode}, ${shippingInfo.country}`;
 
       const orderData = {
-        paymentMethod: "card",
+        paymentMethod: paymentMethod,
         shippingAddress: shippingAddressString,
       };
       const response = await orderService.createOrder(orderData);
@@ -457,124 +508,301 @@ const CheckoutPage = () => {
               <>
                 <h2 className="text-2xl font-bold mb-6">Payment Method</h2>
                 <form onSubmit={handlePaymentSubmit} className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                    <h3 className="font-medium mb-4 flex items-center">
-                      <FiCreditCard className="mr-2" /> Card Details
+                  {/* Payment Method Selection */}
+                  <div className="mb-6">
+                    <h3 className="text-lg font-medium mb-4">
+                      Select Payment Method
                     </h3>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Card Number
-                        </label>
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="relative">
                         <input
-                          type="text"
-                          value={paymentInfo.cardNumber}
-                          onChange={(e) => {
-                            const val = e.target.value
-                              .replace(/\D/g, "")
-                              .slice(0, 16);
-                            const formatted = val.replace(
-                              /(\d{4})(?=\d)/g,
-                              "$1 ",
-                            );
-                            setPaymentInfo({
-                              ...paymentInfo,
-                              cardNumber: formatted,
-                            });
-                          }}
-                          className={`input-field ${errors.cardNumber ? "border-red-500" : ""}`}
-                          placeholder="4242 4242 4242 4242"
-                          maxLength="19"
+                          type="radio"
+                          name="paymentMethod"
+                          value="card"
+                          checked={paymentMethod === "card"}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="sr-only"
                         />
-                        {errors.cardNumber && (
-                          <p className="mt-1 text-xs text-red-600">
-                            {errors.cardNumber}
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Name on Card
-                        </label>
-                        <input
-                          type="text"
-                          value={paymentInfo.cardName}
-                          onChange={(e) =>
-                            setPaymentInfo({
-                              ...paymentInfo,
-                              cardName: e.target.value,
-                            })
-                          }
-                          className={`input-field ${errors.cardName ? "border-red-500" : ""}`}
-                          placeholder="John Doe"
-                        />
-                        {errors.cardName && (
-                          <p className="mt-1 text-xs text-red-600">
-                            {errors.cardName}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Expiry (MM/YY)
-                          </label>
-                          <input
-                            type="text"
-                            value={paymentInfo.expiry}
-                            onChange={(e) => {
-                              let val = e.target.value.replace(/\D/g, "");
-                              if (val.length >= 2) {
-                                val = val.slice(0, 2) + "/" + val.slice(2, 4);
-                              }
-                              setPaymentInfo({ ...paymentInfo, expiry: val });
-                            }}
-                            className={`input-field ${errors.expiry ? "border-red-500" : ""}`}
-                            placeholder="MM/YY"
-                            maxLength="5"
-                          />
-                          {errors.expiry && (
-                            <p className="mt-1 text-xs text-red-600">
-                              {errors.expiry}
-                            </p>
-                          )}
+                        <div
+                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                            paymentMethod === "card"
+                              ? "border-primary-600 bg-primary-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <FiCreditCard className="h-6 w-6 mr-3 text-primary-600" />
+                            <div>
+                              <p className="font-medium">Credit/Debit Card</p>
+                              <p className="text-sm text-gray-500">
+                                Visa, Mastercard
+                              </p>
+                            </div>
+                          </div>
                         </div>
+                      </label>
 
+                      <label className="relative">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="telebirr"
+                          checked={paymentMethod === "telebirr"}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="sr-only"
+                        />
+                        <div
+                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                            paymentMethod === "telebirr"
+                              ? "border-primary-600 bg-primary-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div className="h-6 w-6 mr-3 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-xs">
+                              T
+                            </div>
+                            <div>
+                              <p className="font-medium">Telebirr</p>
+                              <p className="text-sm text-gray-500">
+                                Mobile Money
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+
+                      <label className="relative">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="chapa"
+                          checked={paymentMethod === "chapa"}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="sr-only"
+                        />
+                        <div
+                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                            paymentMethod === "chapa"
+                              ? "border-primary-600 bg-primary-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div className="h-6 w-6 mr-3 bg-blue-500 rounded flex items-center justify-center text-white font-bold text-xs">
+                              C
+                            </div>
+                            <div>
+                              <p className="font-medium">Chapa</p>
+                              <p className="text-sm text-gray-500">
+                                Digital Payment
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+
+                      <label className="relative">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="cbe"
+                          checked={paymentMethod === "cbe"}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                          className="sr-only"
+                        />
+                        <div
+                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                            paymentMethod === "cbe"
+                              ? "border-primary-600 bg-primary-50"
+                              : "border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          <div className="flex items-center">
+                            <div className="h-6 w-6 mr-3 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs">
+                              CBE
+                            </div>
+                            <div>
+                              <p className="font-medium">CBE Bank</p>
+                              <p className="text-sm text-gray-500">
+                                Bank Transfer
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Payment Details Based on Method */}
+                  {paymentMethod === "card" && (
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h3 className="font-medium mb-4 flex items-center">
+                        <FiCreditCard className="mr-2" /> Card Details
+                      </h3>
+
+                      <div className="space-y-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            CVV
+                            Card Number
                           </label>
                           <input
                             type="text"
-                            value={paymentInfo.cvv}
+                            value={paymentInfo.cardNumber}
                             onChange={(e) => {
                               const val = e.target.value
                                 .replace(/\D/g, "")
-                                .slice(0, 3);
-                              setPaymentInfo({ ...paymentInfo, cvv: val });
+                                .slice(0, 16);
+                              const formatted = val.replace(
+                                /(\d{4})(?=\d)/g,
+                                "$1 ",
+                              );
+                              setPaymentInfo({
+                                ...paymentInfo,
+                                cardNumber: formatted,
+                              });
                             }}
-                            className={`input-field ${errors.cvv ? "border-red-500" : ""}`}
-                            placeholder="123"
-                            maxLength="3"
+                            className={`input-field ${errors.cardNumber ? "border-red-500" : ""}`}
+                            placeholder="4242 4242 4242 4242"
+                            maxLength="19"
                           />
-                          {errors.cvv && (
+                          {errors.cardNumber && (
                             <p className="mt-1 text-xs text-red-600">
-                              {errors.cvv}
+                              {errors.cardNumber}
                             </p>
                           )}
                         </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Name on Card
+                          </label>
+                          <input
+                            type="text"
+                            value={paymentInfo.cardName}
+                            onChange={(e) =>
+                              setPaymentInfo({
+                                ...paymentInfo,
+                                cardName: e.target.value,
+                              })
+                            }
+                            className={`input-field ${errors.cardName ? "border-red-500" : ""}`}
+                            placeholder="John Doe"
+                          />
+                          {errors.cardName && (
+                            <p className="mt-1 text-xs text-red-600">
+                              {errors.cardName}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Expiry (MM/YY)
+                            </label>
+                            <input
+                              type="text"
+                              value={paymentInfo.expiry}
+                              onChange={(e) => {
+                                let val = e.target.value.replace(/\D/g, "");
+                                if (val.length >= 2) {
+                                  val = val.slice(0, 2) + "/" + val.slice(2, 4);
+                                }
+                                setPaymentInfo({ ...paymentInfo, expiry: val });
+                              }}
+                              className={`input-field ${errors.expiry ? "border-red-500" : ""}`}
+                              placeholder="MM/YY"
+                              maxLength="5"
+                            />
+                            {errors.expiry && (
+                              <p className="mt-1 text-xs text-red-600">
+                                {errors.expiry}
+                              </p>
+                            )}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              CVV
+                            </label>
+                            <input
+                              type="text"
+                              value={paymentInfo.cvv}
+                              onChange={(e) => {
+                                const val = e.target.value
+                                  .replace(/\D/g, "")
+                                  .slice(0, 3);
+                                setPaymentInfo({ ...paymentInfo, cvv: val });
+                              }}
+                              className={`input-field ${errors.cvv ? "border-red-500" : ""}`}
+                              placeholder="123"
+                              maxLength="3"
+                            />
+                            {errors.cvv && (
+                              <p className="mt-1 text-xs text-red-600">
+                                {errors.cvv}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+
+                  {(paymentMethod === "telebirr" ||
+                    paymentMethod === "chapa") && (
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h3 className="font-medium mb-4 flex items-center">
+                        <FiPhone className="mr-2" /> Mobile Money Details
+                      </h3>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          value={shippingInfo.phone}
+                          onChange={(e) =>
+                            setShippingInfo({
+                              ...shippingInfo,
+                              phone: e.target.value,
+                            })
+                          }
+                          className={`input-field ${errors.phone ? "border-red-500" : ""}`}
+                          placeholder="+251 911 123 456"
+                        />
+                        {errors.phone && (
+                          <p className="mt-1 text-xs text-red-600">
+                            {errors.phone}
+                          </p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-2">
+                          You'll receive a payment prompt on this number.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentMethod === "cbe" && (
+                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                      <h3 className="font-medium mb-4 flex items-center">
+                        <FiCreditCard className="mr-2" /> Bank Transfer Details
+                      </h3>
+                      <div className="text-sm text-gray-600">
+                        <p>
+                          You'll be redirected to CBE's secure payment page to
+                          complete your transaction.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-blue-50 text-blue-700 text-sm p-4 rounded-lg flex items-start">
                     <FiShield className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
                     <p>
                       This is a demo store. No real payments will be processed.
-                      Use any test card number (e.g., 4242 4242 4242 4242).
+                      Use test credentials for the selected payment method.
                     </p>
                   </div>
 

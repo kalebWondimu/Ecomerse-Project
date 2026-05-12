@@ -226,7 +226,7 @@ const OrdersPage = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {orders.map((order) => {
+            {orders.length > 0 && [...orders].reverse().map((order) => {
               const status = getStatusDisplay(order.status);
               const date = formatDate(order.createdAt);
               const isCancelling = cancellingId === order.id;
@@ -253,9 +253,9 @@ const OrdersPage = () => {
                         </div>
                       </div>
                       <div className="text-sm">
-                        <span className="text-gray-500">Order #</span>
-                        <span className="font-mono font-medium">
-                          {order.id}
+                        <span className="text-gray-500">Order </span>
+                        <span className="font-mono font-medium text-primary-600">
+                          ORD-{String(order.id).padStart(6, '0')}
                         </span>
                       </div>
                     </div>

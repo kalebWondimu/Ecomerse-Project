@@ -22,7 +22,12 @@ const UserProfilePage = () => {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    phone: "",
     address: "",
+    city: "",
+    state: "",
+    zipCode: "",
+    country: "Ethiopia",
   });
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState("profile"); // 'profile' or 'orders'
@@ -40,7 +45,12 @@ const UserProfilePage = () => {
       setFormData({
         name: data.name || "",
         email: data.email || "",
+        phone: data.phone || "",
         address: data.address || "",
+        city: data.city || "",
+        state: data.state || "",
+        zipCode: data.zipCode || "",
+        country: data.country || "Ethiopia",
       });
     } catch (error) {
       toast.error("Failed to load profile");
@@ -85,7 +95,12 @@ const UserProfilePage = () => {
     setFormData({
       name: profile?.name || "",
       email: profile?.email || "",
+      phone: profile?.phone || "",
       address: profile?.address || "",
+      city: profile?.city || "",
+      state: profile?.state || "",
+      zipCode: profile?.zipCode || "",
+      country: profile?.country || "Ethiopia",
     });
     setEditing(false);
   };
@@ -288,6 +303,77 @@ const UserProfilePage = () => {
                       </div>
                     </div>
 
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phone Number
+                        </label>
+                        <input
+                          type="tel"
+                          name="phone"
+                          value={formData.phone}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder="+251 911 123 456"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          City
+                        </label>
+                        <input
+                          type="text"
+                          name="city"
+                          value={formData.city}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder="Addis Ababa"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          State
+                        </label>
+                        <input
+                          type="text"
+                          name="state"
+                          value={formData.state}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder="State"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ZIP Code
+                        </label>
+                        <input
+                          type="text"
+                          name="zipCode"
+                          value={formData.zipCode}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder="1000"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Country
+                        </label>
+                        <input
+                          type="text"
+                          name="country"
+                          value={formData.country}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder="Ethiopia"
+                        />
+                      </div>
+                    </div>
+
                     <div className="flex justify-end">
                       <button
                         type="submit"
@@ -321,14 +407,60 @@ const UserProfilePage = () => {
                       </div>
                     </div>
 
-                    <div>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          Phone
+                        </label>
+                        <p className="text-lg font-medium">
+                          {profile?.phone || "No phone provided"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          Address
+                        </label>
+                        <p className="text-lg font-medium">
+                          {profile?.address ||
+                            user?.address ||
+                            "No address provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-6 pt-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          City
+                        </label>
+                        <p className="text-lg font-medium">
+                          {profile?.city || "Not set"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          State
+                        </label>
+                        <p className="text-lg font-medium">
+                          {profile?.state || "Not set"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-500 mb-1">
+                          ZIP Code
+                        </label>
+                        <p className="text-lg font-medium">
+                          {profile?.zipCode || "Not set"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
                       <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Address
+                        Country
                       </label>
                       <p className="text-lg font-medium">
-                        {profile?.address ||
-                          user?.address ||
-                          "No address provided"}
+                        {profile?.country || "Not set"}
                       </p>
                     </div>
 

@@ -1,11 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
+const { admin } = require('../middleware/admin');
 const { 
   createOrder, 
   getOrders, 
   getOrderById, 
-  cancelOrder 
+  cancelOrder,
+  updateOrderStatus 
 } = require('../controllers/orderController');
 
 // All routes require authentication
@@ -19,10 +21,10 @@ router.post('/', createOrder);
 // GET /api/orders/:id - Get single order
 router.get('/:id', getOrderById);
 
+// PUT /api/orders/:id/status - Admin can update order status
+router.put('/:id/status', admin, updateOrderStatus);
+
 // DELETE /api/orders/:id - Cancel order (user can cancel their own)
 router.delete('/:id', cancelOrder);
-
-// Admin only routes - COMMENTED OUT UNTIL WE FIX THE CONTROLLER
-// router.put('/:id/status', admin, updateOrderStatus);
 
 module.exports = router;
