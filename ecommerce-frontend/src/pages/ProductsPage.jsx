@@ -37,8 +37,12 @@ const ProductsPage = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, sortBy]);
+    const handler = setTimeout(() => {
+      fetchProducts();
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [selectedCategory, sortBy, searchTerm]);
 
   const fetchProducts = async () => {
     try {
@@ -122,15 +126,21 @@ const ProductsPage = () => {
         <div className="flex flex-col md:flex-row gap-4">
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1">
-            <div className="relative">
+            <div className="relative flex items-center">
               <input
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="input-field pl-10"
+                className="input-field pl-10 pr-24 w-full"
               />
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <button
+                type="submit"
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 btn-primary px-4 py-2 text-sm"
+              >
+                Search
+              </button>
             </div>
           </form>
 

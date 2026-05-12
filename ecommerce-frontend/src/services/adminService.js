@@ -102,6 +102,16 @@ const adminService = {
       console.error('Error deleting user:', error);
       throw error;
     }
+  },
+
+  sendBroadcastEmail: async (subject, message) => {
+    try {
+      const response = await api.post('/admin/broadcast-email', { subject, message });
+      return response.data;
+    } catch (error) {
+      console.error('Error sending broadcast email:', error);
+      throw error;
+    }
   }
 };
 

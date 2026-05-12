@@ -14,6 +14,7 @@ import {
   FiMapPin,
   FiCreditCard,
   FiAlertCircle,
+  FiEye,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 
@@ -26,6 +27,7 @@ const OrderConfirmationPage = () => {
   const [error, setError] = useState(null);
   const [products, setProducts] = useState({});
   const [isCancelling, setIsCancelling] = useState(false);
+  const [hidingOrder, setHidingOrder] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -33,7 +35,11 @@ const OrderConfirmationPage = () => {
       return;
     }
 
-    fetchOrder();
+    const loadOrderData = async () => {
+      await fetchOrder();
+    };
+
+    loadOrderData();
   }, [orderId, isAuthenticated, navigate]);
 
   const fetchProductDetails = async (productId) => {
@@ -107,6 +113,28 @@ const OrderConfirmationPage = () => {
       toast.error(error.response?.data?.message || "Failed to cancel order");
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleHideOrderHistory = async () => {
+    if (
+      !window.confirm(
+        "Hide this order from your order history? You can still view it from the order details, but it won't appear in your orders list.",
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setHidingOrder(true);
+      await orderService.hideOrder(order.id);
+      toast.success("Order hidden from history");
+      // Redirect to orders page
+      setTimeout(() => navigate("/orders"), 1500);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to hide order");
+    } finally {
+      setHidingOrder(false);
     }
   };
 
@@ -403,6 +431,23 @@ const OrderConfirmationPage = () => {
               )}
             </button>
           )}
+          <button
+            onClick={handleHideOrderHistory}
+            disabled={hidingOrder}
+            className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50"
+          >
+            {hidingOrder ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <span>Hiding...</span>
+              </>
+            ) : (
+              <>
+                <FiEye className="h-4 w-4" />
+                <span>Hide from History</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

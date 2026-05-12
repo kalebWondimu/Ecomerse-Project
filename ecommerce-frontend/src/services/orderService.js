@@ -39,6 +39,16 @@ const orderService = {
       console.error('Cancel order error:', error);
       throw error;
     }
+  },
+
+  hideOrder: async (orderId) => {
+    try {
+      const response = await api.put(`/orders/${orderId}/hide`);
+      return response.data;
+    } catch (error) {
+      console.error('Hide order error:', error);
+      throw error;
+    }
   }
 };
 

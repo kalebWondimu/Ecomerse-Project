@@ -27,7 +27,6 @@ const CheckoutPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [processing, setProcessing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [hasShownEmptyToast, setHasShownEmptyToast] = useState(false);
   const emptyCheckDone = useRef(false);
 
   const [shippingInfo, setShippingInfo] = useState({
@@ -84,7 +83,6 @@ const CheckoutPage = () => {
       if (!cart.items || cart.items.length === 0) {
         if (!emptyCheckDone.current) {
           emptyCheckDone.current = true;
-          toast.error("Your cart is empty");
           navigate("/cart");
         }
       }
@@ -178,7 +176,7 @@ const CheckoutPage = () => {
       const newOrderId = response.id;
       const paymentAmount = parseFloat(total.toFixed(2));
 
-      if (paymentMethod === 'telebirr') {
+      if (paymentMethod === "telebirr") {
         const paymentResponse = await paymentService.initiateTelebirr({
           orderId: newOrderId,
           amount: paymentAmount,
@@ -186,12 +184,13 @@ const CheckoutPage = () => {
         });
         setOrderPlaced(true);
         await clearCart();
-        toast.success(paymentResponse.message || 'Telebirr payment started');
+        toast.success(paymentResponse.message || "Telebirr payment started");
         if (paymentResponse.paymentUrl) {
-          window.location.href = paymentResponse.paymentUrl;
+          window.open(paymentResponse.paymentUrl, "_blank");
+          navigate(`/order-confirmation/${newOrderId}`);
           return;
         }
-      } else if (paymentMethod === 'chapa') {
+      } else if (paymentMethod === "chapa") {
         const paymentResponse = await paymentService.initiateChapa({
           orderId: newOrderId,
           amount: paymentAmount,
@@ -199,12 +198,13 @@ const CheckoutPage = () => {
         });
         setOrderPlaced(true);
         await clearCart();
-        toast.success(paymentResponse.message || 'Chapa checkout initiated');
+        toast.success(paymentResponse.message || "Chapa checkout initiated");
         if (paymentResponse.checkoutUrl) {
-          window.location.href = paymentResponse.checkoutUrl;
+          window.open(paymentResponse.checkoutUrl, "_blank");
+          navigate(`/order-confirmation/${newOrderId}`);
           return;
         }
-      } else if (paymentMethod === 'cbe') {
+      } else if (paymentMethod === "cbe") {
         const paymentResponse = await paymentService.initiateCBE({
           orderId: newOrderId,
           amount: paymentAmount,
@@ -212,23 +212,23 @@ const CheckoutPage = () => {
         });
         setOrderPlaced(true);
         await clearCart();
-        toast.success(paymentResponse.message || 'CBE bank transfer initiated');
+        toast.success(paymentResponse.message || "CBE bank transfer initiated");
         navigate(`/order-confirmation/${newOrderId}`);
         return;
       } else {
         setOrderPlaced(true);
         await clearCart();
-        toast.success('Order placed successfully!');
+        toast.success("Order placed successfully!");
         navigate(`/order-confirmation/${newOrderId}`);
         return;
       }
 
       navigate(`/order-confirmation/${newOrderId}`);
     } catch (error) {
-      console.error('Checkout error:', error);
+      console.error("Checkout error:", error);
       toast.error(
         error.response?.data?.message ||
-          'Failed to place order. Please try again.',
+          "Failed to place order. Please try again.",
       );
       setProcessing(false);
     }
