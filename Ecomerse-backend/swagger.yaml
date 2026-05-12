@@ -95,6 +95,10 @@ components:
           type: string
         paymentMethod:
           type: string
+        paymentStatus:
+          type: string
+        transactionId:
+          type: string
         shippingAddress:
           type: string
     Review:
@@ -110,6 +114,47 @@ components:
           type: number
         comment:
           type: string
+    PaymentInitiation:
+      type: object
+      properties:
+        orderId:
+          type: integer
+        amount:
+          type: number
+        phoneNumber:
+          type: string
+        email:
+          type: string
+          format: email
+        accountNumber:
+          type: string
+      required:
+        - orderId
+        - amount
+    PaymentResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        transactionId:
+          type: string
+        message:
+          type: string
+        paymentUrl:
+          type: string
+        checkoutUrl:
+          type: string
+        bankDetails:
+          type: object
+    PaymentCallback:
+      type: object
+      properties:
+        transactionId:
+          type: string
+        status:
+          type: string
+        orderId:
+          type: integer
 
 security:
   - bearerAuth: []
@@ -671,3 +716,141 @@ paths:
       responses:
         "200":
           description: OK
+
+  /api/payments/telebirr/initiate:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Initiate Telebirr payment for an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInitiation'
+      responses:
+        "200":
+          description: Payment initiation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        "400":
+          description: Invalid request
+        "404":
+          description: Order not found
+
+  /api/payments/chapa/initiate:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Initiate Chapa payment for an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInitiation'
+      responses:
+        "200":
+          description: Checkout URL for Chapa
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        "400":
+          description: Invalid request
+        "404":
+          description: Order not found
+
+  /api/payments/cbe/initiate:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Initiate CBE Bank payment for an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInitiation'
+      responses:
+        "200":
+          description: Bank transfer details and reference number
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        "400":
+          description: Invalid request
+        "404":
+          description: Order not found
+
+  /api/payments/telebirr/callback:
+    post:
+      summary: Telebirr callback endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCallback'
+      responses:
+        "200":
+          description: Payment result acknowledged
+
+  /api/payments/chapa/callback:
+    post:
+      summary: Chapa callback endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCallback'
+      responses:
+        "200":
+          description: Payment result acknowledged
+
+  /api/payments/cbe/callback:
+    post:
+      summary: CBE callback endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentCallback'
+      responses:
+        "200":
+          description: Payment result acknowledged
+
+  /api/payments/verify/{transactionId}:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Verify payment status by transaction ID
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Payment status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactionId:
+                    type: string
+                  paymentStatus:
+                    type: string
+                  orderStatus:
+                    type: string
+                  amount:
+                    type: number
+        "404":
+          description: Transaction not found

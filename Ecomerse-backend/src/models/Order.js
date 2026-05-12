@@ -30,6 +30,10 @@ const Order = sequelize.define('Order', {
     type: DataTypes.STRING, 
     defaultValue: 'pending' 
   },
+  transactionId: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   shippingAddress: { 
     type: DataTypes.TEXT 
   }
