@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { FiSearch, FiFilter, FiX } from "react-icons/fi";
 import ProductCard from "../components/products/ProductCard";
 import productService from "../services/productService";
@@ -8,7 +9,10 @@ const ProductsPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchParams] = useSearchParams();
+  const [selectedCategory, setSelectedCategory] = useState(
+    searchParams.get("category") || "all",
+  );
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
@@ -18,6 +22,15 @@ const ProductsPage = () => {
     fetchProducts();
     extractCategories();
   }, []);
+
+  useEffect(() => {
+    const categoryFromUrl = searchParams.get("category");
+    if (categoryFromUrl) {
+      setSelectedCategory(categoryFromUrl);
+    } else {
+      setSelectedCategory("all");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchProducts();
@@ -30,6 +43,7 @@ const ProductsPage = () => {
         category: selectedCategory !== "all" ? selectedCategory : undefined,
         sort: sortBy,
         search: searchTerm || undefined,
+        limit: 100,
       };
       const data = await productService.getProducts(params);
       setProducts(data);

@@ -397,7 +397,6 @@ const AdminOrders = () => {
                   ×
                 </button>
               </div>
-              // In the Order Details Modal, update the customer info section:
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
                 <h3 className="font-semibold mb-2">Customer Information</h3>
                 <p className="text-sm">

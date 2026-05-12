@@ -25,9 +25,79 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [relatedProducts, setRelatedProducts] = useState([]);
+  const [favorites, setFavorites] = useState([]);
 
   const { addToCart } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
+
+  const favoritesKey = user ? `favorites_${user.id}` : "favorites_guest";
+
+  useEffect(() => {
+    fetchProductDetails();
+  }, [id]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(favoritesKey);
+    if (stored) {
+      try {
+        setFavorites(JSON.parse(stored));
+      } catch (error) {
+        setFavorites([]);
+      }
+    } else {
+      setFavorites([]);
+    }
+  }, [favoritesKey]);
+
+  const saveFavorites = (items) => {
+    localStorage.setItem(favoritesKey, JSON.stringify(items));
+  };
+
+  const isFavorited = product
+    ? favorites.some((item) => item.id === product.id)
+    : false;
+
+  const handleToggleFavorite = () => {
+    if (!product) return;
+
+    const exists = favorites.some((item) => item.id === product.id);
+    const updatedFavorites = exists
+      ? favorites.filter((item) => item.id !== product.id)
+      : [
+          ...favorites,
+          {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            images: product.images,
+            category: product.category,
+          },
+        ];
+
+    setFavorites(updatedFavorites);
+    saveFavorites(updatedFavorites);
+    toast.success(exists ? "Removed from favorites" : "Added to favorites");
+  };
+
+  const handleShareProduct = async () => {
+    const url = window.location.href;
+    const shareData = {
+      title: product?.name || "Check this product",
+      text: `Take a look at ${product?.name}`,
+      url,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Product link copied to clipboard");
+      }
+    } catch (error) {
+      toast.error("Could not share product right now");
+    }
+  };
 
   useEffect(() => {
     fetchProductDetails();
@@ -267,11 +337,29 @@ const ProductDetailPage = () => {
               {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
             </button>
 
-            <button className="p-4 border border-gray-300 rounded-xl hover:bg-gray-100 transition-colors">
-              <FiHeart className="h-5 w-5" />
+            <button
+              onClick={handleToggleFavorite}
+              className={`p-4 border rounded-xl transition-colors ${
+                isFavorited
+                  ? "bg-red-100 border-red-300 text-red-600"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-100"
+              }`}
+              aria-label={
+                isFavorited ? "Remove from favorites" : "Add to favorites"
+              }
+            >
+              <FiHeart
+                className={`h-5 w-5 ${
+                  isFavorited ? "text-red-600" : "text-gray-600"
+                }`}
+              />
             </button>
 
-            <button className="p-4 border border-gray-300 rounded-xl hover:bg-gray-100 transition-colors">
+            <button
+              onClick={handleShareProduct}
+              className="p-4 border border-gray-300 rounded-xl hover:bg-gray-100 transition-colors"
+              aria-label="Share product"
+            >
               <FiShare2 className="h-5 w-5" />
             </button>
           </div>

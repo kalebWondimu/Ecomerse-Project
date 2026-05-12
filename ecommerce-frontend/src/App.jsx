@@ -1,5 +1,10 @@
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  NavLink,
+} from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
@@ -22,6 +27,7 @@ import CheckoutPage from "./pages/CheckoutPage";
 import UserProfilePage from "./pages/UserProfilePage";
 import OrdersPage from "./pages/OrdersPage";
 import OrderConfirmationPage from "./pages/OrderConfirmationPage";
+import FavoritesPage from "./pages/FavoritesPage";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -44,32 +50,40 @@ const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
 
+  const navLinkClass = ({ isActive }) =>
+    `transition-colors ${
+      isActive
+        ? "text-primary-600 font-semibold"
+        : "text-gray-600 hover:text-primary-600"
+    }`;
+
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
       <div className="container-custom py-4">
         <div className="flex justify-between items-center">
-          <a
-            href="/"
+          <NavLink
+            to="/"
+            end
             className="text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors"
           >
             E-Store
-          </a>
+          </NavLink>
           <div className="flex items-center space-x-6">
-            <a
-              href="/"
-              className="text-gray-600 hover:text-primary-600 transition-colors"
-            >
+            <NavLink to="/" end className={navLinkClass}>
               Home
-            </a>
-            <a
-              href="/products"
-              className="text-gray-600 hover:text-primary-600 transition-colors"
-            >
+            </NavLink>
+            <NavLink to="/products" className={navLinkClass} end={false}>
               Products
-            </a>
-            <a
-              href="/cart"
-              className="text-gray-600 hover:text-primary-600 transition-colors relative"
+            </NavLink>
+            <NavLink
+              to="/cart"
+              className={({ isActive }) =>
+                `relative transition-colors ${
+                  isActive
+                    ? "text-primary-600 font-semibold"
+                    : "text-gray-600 hover:text-primary-600"
+                }`
+              }
             >
               Cart
               {itemCount > 0 && (
@@ -77,30 +91,24 @@ const Navbar = () => {
                   {itemCount}
                 </span>
               )}
-            </a>
+            </NavLink>
 
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
                 {user?.role === "admin" && (
-                  <a
-                    href="/admin"
-                    className="text-gray-600 hover:text-primary-600 transition-colors font-medium"
-                  >
+                  <NavLink to="/admin" className={navLinkClass}>
                     Admin
-                  </a>
+                  </NavLink>
                 )}
-                <a
-                  href="/orders"
-                  className="text-gray-600 hover:text-primary-600 transition-colors"
-                >
+                <NavLink to="/favorites" className={navLinkClass}>
+                  Favorites
+                </NavLink>
+                <NavLink to="/orders" className={navLinkClass}>
                   Orders
-                </a>
-                <a
-                  href="/profile"
-                  className="text-sm text-gray-600 hover:text-primary-600 transition-colors"
-                >
+                </NavLink>
+                <NavLink to="/profile" className={navLinkClass}>
                   Hi, {user?.name}
-                </a>
+                </NavLink>
                 <button
                   onClick={logout}
                   className="text-gray-600 hover:text-primary-600 transition-colors"
@@ -110,15 +118,12 @@ const Navbar = () => {
               </div>
             ) : (
               <>
-                <a
-                  href="/login"
-                  className="text-gray-600 hover:text-primary-600 transition-colors"
-                >
+                <NavLink to="/login" className={navLinkClass}>
                   Login
-                </a>
-                <a href="/register" className="btn-primary">
+                </NavLink>
+                <NavLink to="/register" className="btn-primary">
                   Sign Up
-                </a>
+                </NavLink>
               </>
             )}
           </div>
@@ -306,6 +311,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <UserProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/favorites"
+                  element={
+                    <ProtectedRoute>
+                      <FavoritesPage />
                     </ProtectedRoute>
                   }
                 />

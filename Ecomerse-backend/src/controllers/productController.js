@@ -12,7 +12,7 @@ exports.createProduct = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, category, minPrice, maxPrice, sort = 'newest' } = req.query;
+    const { page = 1, limit = 100, search, category, minPrice, maxPrice, sort = 'newest' } = req.query;
     const where = {};
     let order = [['createdAt', 'DESC']];
     
