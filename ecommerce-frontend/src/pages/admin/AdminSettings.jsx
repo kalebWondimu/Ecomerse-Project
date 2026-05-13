@@ -106,6 +106,7 @@ const AdminSettings = () => {
     { id: "payment", name: "Payment", icon: FiCreditCard },
     { id: "shipping", name: "Shipping", icon: FiTruck },
     { id: "email", name: "Email", icon: FiMail },
+    { id: "broadcast", name: "Broadcast", icon: FiBell },
     { id: "security", name: "Security", icon: FiLock },
   ];
 
@@ -441,17 +442,24 @@ const AdminSettings = () => {
                 className="input-field"
               />
             </div>
+          </div>
+        );
 
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium mb-4">
-                Broadcast Email to All Users
-              </h3>
+      case "broadcast":
+        return (
+          <div className="space-y-6">
+            <h3 className="text-lg font-medium">Broadcast Email</h3>
+            <p className="text-sm text-gray-600">
+              Send an email announcement to all registered users.
+            </p>
+
+            <div className="bg-white rounded-xl shadow-sm p-6">
               <button
                 onClick={() => setShowBroadcastModal(true)}
                 className="btn-primary flex items-center gap-2"
               >
                 <FiBell className="h-4 w-4" />
-                Send Broadcast Email
+                Open Broadcast Email Form
               </button>
             </div>
           </div>

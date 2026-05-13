@@ -51,7 +51,10 @@ exports.updateProfile = async (req, res) => {
 exports.getUserOrders = async (req, res) => {
   try {
     const orders = await Order.findAll({
-      where: { userId: req.user.id },
+      where: {
+        userId: req.user.id,
+        hiddenByCustomer: false,
+      },
       order: [['createdAt', 'DESC']],
     });
     res.json(orders);

@@ -1,4 +1,5 @@
 const { User, Order, Product } = require('../models');
+const emailService = require('../services/emailService');
 
 exports.getUsers = async (req, res) => {
   try {
@@ -70,6 +71,22 @@ exports.getOrders = async (req, res) => {
     res.json(transformedOrders);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+exports.sendBroadcastEmail = async (req, res) => {
+  try {
+    const { subject, message } = req.body;
+
+    if (!subject || !message) {
+      return res.status(400).json({ message: 'Subject and message are required' });
+    }
+
+    const result = await emailService.sendBroadcastEmail(subject, message);
+    res.json({ success: true, message: 'Broadcast email sent successfully', result });
+  } catch (error) {
+    console.error('Broadcast email error:', error);
+    res.status(500).json({ message: error.message || 'Failed to send broadcast email' });
   }
 };
 

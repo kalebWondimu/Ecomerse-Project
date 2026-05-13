@@ -297,6 +297,138 @@ const emailService = {
     }
   },
 
+  sendOrderDeliveredEmail: async (email, orderId, items, totalAmount, shippingAddress) => {
+    const mailOptions = {
+      from: `"E-Store Support" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: `Your Order #${orderId} Has Been Delivered`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+            <style>
+              body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #1f2937; color: white; padding: 24px; border-radius: 8px 8px 0 0; text-align: center; }
+              .content { background: #f9fafb; padding: 24px; border: 1px solid #e5e7eb; border-top: none; }
+              .item { margin-bottom: 14px; }
+              .footer { color: #6b7280; font-size: 12px; text-align: center; padding: 20px; }
+              .badge { display: inline-block; margin-bottom: 12px; padding: 8px 14px; background: #10b981; color: white; border-radius: 9999px; font-weight: 600; }
+              .table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+              .table th, .table td { padding: 12px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; }
+            </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Order Delivered</h1>
+            </div>
+            <div class="content">
+              <div class="badge">Delivered</div>
+              <p>Good news! Your order <strong>#${orderId}</strong> has been marked as delivered.</p>
+              <p>Here are the items included in your shipment:</p>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${items
+                    .map(
+                      (item) => `
+                        <tr>
+                          <td>${item.productName || `Product #${item.productId}`}</td>
+                          <td>${item.quantity}</td>
+                          <td>$${(item.price || 0).toFixed(2)}</td>
+                        </tr>
+                      `,
+                    )
+                    .join('')}
+                </tbody>
+              </table>
+              <p><strong>Total Paid:</strong> $${(totalAmount || 0).toFixed(2)}</p>
+              <p><strong>Shipping Address:</strong></p>
+              <p>${shippingAddress}</p>
+              <p>If you have any questions or need assistance, reply to this email and we will help you.</p>
+            </div>
+            <div class="footer">
+              <p>Thank you for shopping with E-Store.</p>
+              <p>&copy; ${new Date().getFullYear()} E-Store. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `Your order #${orderId} has been delivered.
+
+Items:
+${items
+        .map(
+          (item) => `- ${item.productName || `Product #${item.productId}`} x${item.quantity} - $${(item.price || 0).toFixed(2)}`,
+        )
+        .join('\n')}
+
+Total Paid: $${(totalAmount || 0).toFixed(2)}
+
+Shipping Address: ${shippingAddress}
+
+If you have questions, reply to this email.
+`,
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending delivery email:', error);
+      throw error;
+    }
+  },
+
+  sendBroadcastEmail: async (subject, message) => {
+    const allUsers = await require('../models').User.findAll({
+      where: { email: { [require('sequelize').Op.ne]: null } },
+      attributes: ['email'],
+    });
+
+    const emailAddresses = allUsers
+      .map((user) => user.email)
+      .filter(Boolean);
+
+    if (emailAddresses.length === 0) {
+      throw new Error('No users with valid email addresses found.');
+    }
+
+    const mailOptions = {
+      from: `"E-Store Admin" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      bcc: emailAddresses,
+      subject: subject,
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2>${subject}</h2>
+          <p>${message.replace(/\n/g, '<br/>')}</p>
+          <hr />
+          <p>If you have any questions, reply to this email.</p>
+        </div>
+      `,
+      text: `${subject}\n\n${message}`,
+    };
+
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending broadcast email:', error);
+      throw error;
+    }
+  },
+
   sendContactEmail: async ({ name, email, subject, message }) => {
     const supportEmail = process.env.CONTACT_EMAIL || process.env.EMAIL_USER;
     if (!supportEmail) {

@@ -226,164 +226,172 @@ const OrdersPage = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            {orders.length > 0 && [...orders].reverse().map((order) => {
-              const status = getStatusDisplay(order.status);
-              const date = formatDate(order.createdAt);
-              const isCancelling = cancellingId === order.id;
+            {orders.length > 0 &&
+              [...orders]
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                .map((order) => {
+                  const status = getStatusDisplay(order.status);
+                  const date = formatDate(order.createdAt);
+                  const isCancelling = cancellingId === order.id;
 
-              return (
-                <div
-                  key={order.id}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
-                >
-                  {/* Order Header */}
-                  <div className="bg-gray-50 px-6 py-4 border-b flex flex-wrap items-center justify-between">
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-3">
-                        {getStatusIcon(order.status)}
-                        <div>
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}
-                          >
-                            {status.text}
-                          </span>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {status.description}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-sm">
-                        <span className="text-gray-500">Order </span>
-                        <span className="font-mono font-medium text-primary-600">
-                          ORD-{String(order.id).padStart(6, '0')}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-sm text-gray-500">{date.full}</div>
-                      {status.canCancel && order.status !== "cancelled" && (
-                        <button
-                          onClick={() => handleCancelOrder(order.id)}
-                          disabled={isCancelling}
-                          className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 disabled:opacity-50"
-                        >
-                          {isCancelling ? (
-                            <>
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                              <span>Cancelling...</span>
-                            </>
-                          ) : (
-                            <>
-                              <FiXCircle className="h-4 w-4" />
-                              <span>Cancel Order</span>
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Order Items */}
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      {order.items?.map((item, idx) => {
-                        const product = products[item.productId];
-                        return (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-4 py-2"
-                          >
-                            <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                              {product?.images?.[0] ? (
-                                <img
-                                  src={product.images[0]}
-                                  alt={product.name}
-                                  className="w-full h-full object-cover"
-                                  onError={(e) => {
-                                    e.target.onerror = null;
-                                    e.target.style.display = "none";
-                                    e.target.parentNode.innerHTML =
-                                      '<div class="w-full h-full flex items-center justify-center"><span class="text-2xl">📦</span></div>';
-                                  }}
-                                />
-                              ) : (
-                                <span className="text-2xl">📦</span>
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <h3 className="font-medium">
-                                {product?.name || `Product #${item.productId}`}
-                              </h3>
-                              <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                                <span>Quantity: {item.quantity}</span>
-                                <span>Price: ${item.price?.toFixed(2)}</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-bold text-primary-600">
-                                ${(item.price * item.quantity).toFixed(2)}
-                              </div>
+                  return (
+                    <div
+                      key={order.id}
+                      className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden"
+                    >
+                      {/* Order Header */}
+                      <div className="bg-gray-50 px-6 py-4 border-b flex flex-wrap items-center justify-between">
+                        <div className="flex items-center space-x-6">
+                          <div className="flex items-center space-x-3">
+                            {getStatusIcon(order.status)}
+                            <div>
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}
+                              >
+                                {status.text}
+                              </span>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {status.description}
+                              </p>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Order Summary */}
-                    <div className="mt-6 pt-4 border-t flex flex-wrap items-center justify-between">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>
-                            Subtotal: ${(order.totalAmount || 0).toFixed(2)}
-                          </span>
-                          <span>•</span>
-                          <span>Shipping: Calculated at checkout</span>
-                        </div>
-                        {order.shippingAddress && (
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
-                            <FiMapPin className="h-4 w-4" />
-                            <span className="truncate max-w-md">
-                              {order.shippingAddress}
+                          <div className="text-sm">
+                            <span className="text-gray-500">Order </span>
+                            <span className="font-mono font-medium text-primary-600">
+                              ORD-{String(order.id).padStart(6, "0")}
                             </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-sm text-gray-500">
+                            {date.full}
+                          </div>
+                          {status.canCancel && order.status !== "cancelled" && (
+                            <button
+                              onClick={() => handleCancelOrder(order.id)}
+                              disabled={isCancelling}
+                              className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1 disabled:opacity-50"
+                            >
+                              {isCancelling ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                  <span>Cancelling...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <FiXCircle className="h-4 w-4" />
+                                  <span>Cancel Order</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Order Items */}
+                      <div className="p-6">
+                        <div className="space-y-4">
+                          {order.items?.map((item, idx) => {
+                            const product = products[item.productId];
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-4 py-2"
+                              >
+                                <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
+                                  {product?.images?.[0] ? (
+                                    <img
+                                      src={product.images[0]}
+                                      alt={product.name}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        e.target.onerror = null;
+                                        e.target.style.display = "none";
+                                        e.target.parentNode.innerHTML =
+                                          '<div class="w-full h-full flex items-center justify-center"><span class="text-2xl">📦</span></div>';
+                                      }}
+                                    />
+                                  ) : (
+                                    <span className="text-2xl">📦</span>
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <h3 className="font-medium">
+                                    {product?.name ||
+                                      `Product #${item.productId}`}
+                                  </h3>
+                                  <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                                    <span>Quantity: {item.quantity}</span>
+                                    <span>
+                                      Price: ${item.price?.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-bold text-primary-600">
+                                    ${(item.price * item.quantity).toFixed(2)}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Order Summary */}
+                        <div className="mt-6 pt-4 border-t flex flex-wrap items-center justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                              <span>
+                                Subtotal: ${(order.totalAmount || 0).toFixed(2)}
+                              </span>
+                              <span>•</span>
+                              <span>Shipping: Calculated at checkout</span>
+                            </div>
+                            {order.shippingAddress && (
+                              <div className="flex items-center gap-2 text-sm text-gray-500">
+                                <FiMapPin className="h-4 w-4" />
+                                <span className="truncate max-w-md">
+                                  {order.shippingAddress}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-gray-900">
+                              Total:{" "}
+                              <span className="text-primary-600">
+                                ${(order.totalAmount || 0).toFixed(2)}
+                              </span>
+                            </div>
+                            <Link
+                              to={`/order-confirmation/${order.id}`}
+                              className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 mt-1 font-medium"
+                            >
+                              <FiEye className="mr-1" />
+                              View Order Details
+                            </Link>
+                          </div>
+                        </div>
+
+                        {/* Cancellation Notice */}
+                        {order.status === "cancelled" && (
+                          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
+                            <FiAlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-red-800">
+                                Order Cancelled
+                              </p>
+                              <p className="text-xs text-red-600 mt-1">
+                                This order has been cancelled. If you were
+                                charged, please contact support for a refund.
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-gray-900">
-                          Total:{" "}
-                          <span className="text-primary-600">
-                            ${(order.totalAmount || 0).toFixed(2)}
-                          </span>
-                        </div>
-                        <Link
-                          to={`/order-confirmation/${order.id}`}
-                          className="inline-flex items-center text-sm text-primary-600 hover:text-primary-700 mt-1 font-medium"
-                        >
-                          <FiEye className="mr-1" />
-                          View Order Details
-                        </Link>
-                      </div>
                     </div>
-
-                    {/* Cancellation Notice */}
-                    {order.status === "cancelled" && (
-                      <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-3">
-                        <FiAlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-red-800">
-                            Order Cancelled
-                          </p>
-                          <p className="text-xs text-red-600 mt-1">
-                            This order has been cancelled. If you were charged,
-                            please contact support for a refund.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
           </div>
         )}
       </div>

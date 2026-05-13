@@ -14,26 +14,29 @@ exports.initiateTelebirrPayment = async (req, res) => {
 
     // Telebirr API Configuration
     const telebirrConfig = {
-      apiKey: process.env.TELEBIRR_API_KEY,
-      apiSecret: process.env.TELEBIRR_API_SECRET,
+      apiKey: process.env.TELEBIRR_API_KEY || 'demo-telebirr-key',
+      apiSecret: process.env.TELEBIRR_API_SECRET || 'demo-telebirr-secret',
+      merchantId: process.env.TELEBIRR_MERCHANT_ID || 'demo-merchant',
       endpoint: 'https://api.telebirr.com/v1/payments',
     };
 
-    if (!telebirrConfig.apiKey || !telebirrConfig.apiSecret) {
-      return res.status(500).json({
-        message: 'Telebirr configuration missing',
-      });
+    // For demo mode, use mock gateway values if no real credentials are provided.
+    if (!process.env.TELEBIRR_API_KEY || !process.env.TELEBIRR_API_SECRET) {
+      console.warn('Telebirr credentials are not set; using demo payment flow.');
     }
 
     // Create payment request
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
     const payload = {
-      merchantId: process.env.TELEBIRR_MERCHANT_ID,
+      merchantId: telebirrConfig.merchantId,
       orderId: `ORD-${String(orderId).padStart(6, '0')}`,
       amount: Math.round(amount * 100), // Convert to cents
       currency: 'ETB',
       phoneNumber: phoneNumber,
-      callbackUrl: `${process.env.BACKEND_URL}/api/payments/telebirr/callback`,
-      returnUrl: `${process.env.FRONTEND_URL}/payment-success`,
+      callbackUrl: `${backendUrl}/api/payments/telebirr/callback`,
+      returnUrl: `${frontendUrl}/payment-success`,
     };
 
     // In production, make actual API call
@@ -60,7 +63,7 @@ exports.initiateTelebirrPayment = async (req, res) => {
       success: true,
       transactionId: mockTransactionId,
       message: 'Payment initiated. USSD prompt will be sent to ' + phoneNumber,
-      paymentUrl: `https://telebirr.com/pay/${mockTransactionId}`, // Mock URL
+      paymentUrl: `https://telebirr.com/?transaction=${mockTransactionId}`, // Mock URL safe redirect to main site
     });
   } catch (error) {
     console.error('Telebirr payment error:', error);
@@ -80,15 +83,16 @@ exports.initiateChapPayment = async (req, res) => {
     }
 
     const chapaConfig = {
-      apiKey: process.env.CHAPA_API_KEY,
+      apiKey: process.env.CHAPA_API_KEY || 'demo-chapa-key',
       endpoint: 'https://api.chapa.co/v1/transaction/initialize',
     };
 
-    if (!chapaConfig.apiKey) {
-      return res.status(500).json({
-        message: 'Chapa configuration missing',
-      });
+    if (!process.env.CHAPA_API_KEY) {
+      console.warn('Chapa credentials are not set; using demo payment flow.');
     }
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     const payload = {
       amount: amount,
@@ -97,8 +101,8 @@ exports.initiateChapPayment = async (req, res) => {
       first_name: 'Customer',
       phone_number: '0900000000',
       tx_ref: `ORD-${String(orderId).padStart(6, '0')}-${Date.now()}`,
-      callback_url: `${process.env.BACKEND_URL}/api/payments/chapa/callback`,
-      return_url: `${process.env.FRONTEND_URL}/payment-success`,
+      callback_url: `${backendUrl}/api/payments/chapa/callback`,
+      return_url: `${frontendUrl}/payment-success`,
       customization: {
         title: 'E-commerce Order Payment',
         description: `Order #${orderId}`,
@@ -114,7 +118,7 @@ exports.initiateChapPayment = async (req, res) => {
     // });
 
     // For demo: return mock response
-    const mockCheckoutUrl = `https://checkout.chapa.co/${payload.tx_ref}`;
+    const mockCheckoutUrl = `https://checkout.chapa.co/?reference=${payload.tx_ref}`;
     
     const order = await Order.findByPk(orderId);
     if (!order || order.userId !== req.user.id) {
@@ -128,7 +132,7 @@ exports.initiateChapPayment = async (req, res) => {
     res.json({
       success: true,
       transactionId: payload.tx_ref,
-      checkoutUrl: mockCheckoutUrl,
+      checkoutUrl: `https://checkout.chapa.co/?reference=${payload.tx_ref}`,
       message: 'Redirect user to checkout URL',
     });
   } catch (error) {
@@ -149,16 +153,17 @@ exports.initiateCBEPayment = async (req, res) => {
     }
 
     const cbeConfig = {
-      apiKey: process.env.CBE_API_KEY,
-      merchantCode: process.env.CBE_MERCHANT_CODE,
+      apiKey: process.env.CBE_API_KEY || 'demo-cbe-key',
+      merchantCode: process.env.CBE_MERCHANT_CODE || 'demo-merchant-code',
       endpoint: 'https://api.cbebirr.et/v1/payments',
     };
 
-    if (!cbeConfig.apiKey || !cbeConfig.merchantCode) {
-      return res.status(500).json({
-        message: 'CBE configuration missing',
-      });
+    if (!process.env.CBE_API_KEY || !process.env.CBE_MERCHANT_CODE) {
+      console.warn('CBE credentials are not set; using demo payment flow.');
     }
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     const payload = {
       merchantCode: cbeConfig.merchantCode,
@@ -166,8 +171,8 @@ exports.initiateCBEPayment = async (req, res) => {
       amount: amount,
       currency: 'ETB',
       description: `E-commerce Order #${orderId}`,
-      callbackUrl: `${process.env.BACKEND_URL}/api/payments/cbe/callback`,
-      returnUrl: `${process.env.FRONTEND_URL}/payment-success`,
+      callbackUrl: `${backendUrl}/api/payments/cbe/callback`,
+      returnUrl: `${frontendUrl}/payment-success`,
     };
 
     // In production: make actual API call

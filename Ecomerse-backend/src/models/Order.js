@@ -30,6 +30,10 @@ const Order = sequelize.define('Order', {
     type: DataTypes.STRING, 
     defaultValue: 'pending' 
   },
+  hiddenByCustomer: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   transactionId: {
     type: DataTypes.STRING,
     allowNull: true,
@@ -45,8 +49,7 @@ const Order = sequelize.define('Order', {
 // Define association
 Order.associate = (models) => {
   Order.belongsTo(models.User, {
-    foreignKey: 'userId',
-    as: 'user'
+    foreignKey: 'userId'
   });
 };
 
