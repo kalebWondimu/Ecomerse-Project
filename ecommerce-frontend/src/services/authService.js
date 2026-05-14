@@ -128,7 +128,7 @@ const authService = {
 
   isAdmin: () => {
     const user = authService.getCurrentUser();
-    return user?.role === 'admin';
+    return user?.role === 'admin' || user?.role === 'super-admin';
   }
 };
 

@@ -3,6 +3,7 @@ const Product = require('./Product');
 const Order = require('./Order');
 const Cart = require('./Cart');
 const Review = require('./Review');
+const StoreSettings = require('./StoreSettings');
 
 // Define all associations - ONCE
 User.hasMany(Order, { foreignKey: 'userId' });
@@ -23,5 +24,6 @@ module.exports = {
   Product,
   Order,
   Cart,
-  Review
+  Review,
+  StoreSettings
 };

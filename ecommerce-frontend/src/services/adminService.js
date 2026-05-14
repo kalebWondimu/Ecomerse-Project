@@ -104,12 +104,82 @@ const adminService = {
     }
   },
 
+  updateAdmin: async (adminId, adminData) => {
+    try {
+      const response = await api.put(`/admin/admins/${adminId}`, adminData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating admin:', error);
+      throw error;
+    }
+  },
+
   sendBroadcastEmail: async (subject, message) => {
     try {
       const response = await api.post('/admin/broadcast-email', { subject, message });
       return response.data;
     } catch (error) {
       console.error('Error sending broadcast email:', error);
+      throw error;
+    }
+  },
+
+  getSettings: async () => {
+    try {
+      const response = await api.get('/admin/settings');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      throw error;
+    }
+  },
+
+  getPublicSettings: async () => {
+    try {
+      const response = await api.get('/settings');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching public settings:', error);
+      throw error;
+    }
+  },
+
+  updateSettings: async (settingsData) => {
+    try {
+      const response = await api.put('/admin/settings', settingsData);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      throw error;
+    }
+  },
+
+  createAdmin: async (adminData) => {
+    try {
+      const response = await api.post('/admin/admins', adminData);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating admin:', error);
+      throw error;
+    }
+  },
+
+  getAdmins: async () => {
+    try {
+      const response = await api.get('/admin/admins');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching admins:', error);
+      throw error;
+    }
+  },
+
+  deleteAdmin: async (adminId) => {
+    try {
+      const response = await api.delete(`/admin/admins/${adminId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting admin:', error);
       throw error;
     }
   }

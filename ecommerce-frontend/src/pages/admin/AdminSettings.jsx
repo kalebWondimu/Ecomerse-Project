@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminSidebar from "./AdminSidebar";
+import adminService from "../../services/adminService";
+import { useStoreSettings } from "../../context/StoreSettingsContext";
 import {
   FiSave,
   FiCreditCard,
@@ -18,12 +20,77 @@ import toast from "react-hot-toast";
 const AdminSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState("admin");
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
   const [broadcastData, setBroadcastData] = useState({
     subject: "",
     message: "",
   });
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
+  const [admins, setAdmins] = useState([]);
+  const [showCreateAdminModal, setShowCreateAdminModal] = useState(false);
+  const [showEditAdminModal, setShowEditAdminModal] = useState(false);
+  const [newAdminData, setNewAdminData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: "",
+  });
+  const [editingAdmin, setEditingAdmin] = useState(null);
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
+  const [updatingAdmin, setUpdatingAdmin] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem("user"));
+        setUserRole(user?.role || "admin");
+
+        const data = await adminService.getSettings();
+        setSettings({
+          general: {
+            storeName: data.storeName || "E-Store",
+            storeEmail: data.storeEmail || "contact@estore.com",
+            storePhone: data.storePhone || "+1 (555) 123-4567",
+            storeAddress:
+              data.storeAddress || "123 Commerce St, New York, NY 10001",
+            currency: data.currency || "USD",
+            timezone: data.timezone || "America/New_York",
+            language: data.language || "en",
+          },
+          payment: {
+            methods: data.paymentMethods || [],
+            currency: "USD",
+            taxRate: 10,
+          },
+          shipping: {
+            methods: data.shippingMethods || [],
+            freeShippingThreshold: 100,
+            internationalShipping: false,
+          },
+          email: data.emailSettings || {},
+          security: data.securitySettings || {},
+        });
+
+        // Fetch admins if user is super-admin
+        if (user?.role === "super-admin") {
+          try {
+            const adminsData = await adminService.getAdmins();
+            setAdmins(Array.isArray(adminsData) ? adminsData : []);
+          } catch (error) {
+            console.error("Failed to fetch admins:", error);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch settings:", error);
+        toast.error("Failed to load settings");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Store settings
   const [settings, setSettings] = useState({
@@ -107,6 +174,9 @@ const AdminSettings = () => {
     { id: "shipping", name: "Shipping", icon: FiTruck },
     { id: "email", name: "Email", icon: FiMail },
     { id: "broadcast", name: "Broadcast", icon: FiBell },
+    ...(userRole === "super-admin"
+      ? [{ id: "admins", name: "Admins", icon: FiShield }]
+      : []),
     { id: "security", name: "Security", icon: FiLock },
   ];
 
@@ -148,12 +218,47 @@ const AdminSettings = () => {
     });
   };
 
+  const { updateStoreSettings } = useStoreSettings();
+
   const handleSave = async () => {
+    if (userRole !== "super-admin") {
+      toast.error("Only super-admin can modify settings");
+      return;
+    }
+
     setSaving(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    toast.success("Settings saved successfully");
-    setSaving(false);
+    try {
+      const settingsData = {
+        storeName: settings.general.storeName,
+        storeEmail: settings.general.storeEmail,
+        storePhone: settings.general.storePhone,
+        storeAddress: settings.general.storeAddress,
+        currency: settings.general.currency,
+        timezone: settings.general.timezone,
+        language: settings.general.language,
+        paymentMethods: settings.payment.methods,
+        shippingMethods: settings.shipping.methods,
+        emailSettings: settings.email,
+        securitySettings: settings.security,
+      };
+
+      await adminService.updateSettings(settingsData);
+      toast.success("Settings saved successfully");
+      updateStoreSettings({
+        storeName: settings.general.storeName,
+        storeEmail: settings.general.storeEmail,
+        storePhone: settings.general.storePhone,
+        storeAddress: settings.general.storeAddress,
+        currency: settings.general.currency,
+        timezone: settings.general.timezone,
+        language: settings.general.language,
+      });
+    } catch (error) {
+      console.error("Save settings error:", error);
+      toast.error(error.response?.data?.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSendBroadcastEmail = async (e) => {
@@ -165,8 +270,6 @@ const AdminSettings = () => {
 
     try {
       setSendingBroadcast(true);
-      // eslint-disable-next-line global-require
-      const adminService = require("../../services/adminService").default;
       await adminService.sendBroadcastEmail(
         broadcastData.subject,
         broadcastData.message,
@@ -180,6 +283,79 @@ const AdminSettings = () => {
       );
     } finally {
       setSendingBroadcast(false);
+    }
+  };
+
+  const handleCreateAdmin = async (e) => {
+    e.preventDefault();
+    if (!newAdminData.name || !newAdminData.email || !newAdminData.password) {
+      toast.error("Name, email, and password are required");
+      return;
+    }
+
+    try {
+      setCreatingAdmin(true);
+      await adminService.createAdmin(newAdminData);
+      toast.success("Admin created successfully!");
+      setNewAdminData({ name: "", email: "", password: "", phone: "" });
+      setShowCreateAdminModal(false);
+      const adminsData = await adminService.getAdmins();
+      setAdmins(Array.isArray(adminsData) ? adminsData : []);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to create admin");
+    } finally {
+      setCreatingAdmin(false);
+    }
+  };
+
+  const handleEditAdmin = (admin) => {
+    setEditingAdmin({
+      ...admin,
+      password: "",
+    });
+    setShowEditAdminModal(true);
+  };
+
+  const handleSaveAdminUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingAdmin?.name || !editingAdmin?.email) {
+      toast.error("Name and email are required");
+      return;
+    }
+
+    try {
+      setUpdatingAdmin(true);
+      await adminService.updateAdmin(editingAdmin.id, {
+        name: editingAdmin.name,
+        email: editingAdmin.email,
+        phone: editingAdmin.phone,
+        role: editingAdmin.role,
+        ...(editingAdmin.password ? { password: editingAdmin.password } : {}),
+      });
+      toast.success("Admin updated successfully!");
+      setShowEditAdminModal(false);
+      setEditingAdmin(null);
+      const adminsData = await adminService.getAdmins();
+      setAdmins(Array.isArray(adminsData) ? adminsData : []);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to update admin");
+    } finally {
+      setUpdatingAdmin(false);
+    }
+  };
+
+  const handleDeleteAdmin = async (adminId) => {
+    if (!window.confirm("Are you sure you want to delete this admin?")) {
+      return;
+    }
+
+    try {
+      await adminService.deleteAdmin(adminId);
+      toast.success("Admin deleted successfully!");
+      const adminsData = await adminService.getAdmins();
+      setAdmins(Array.isArray(adminsData) ? adminsData : []);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to delete admin");
     }
   };
 
@@ -465,6 +641,66 @@ const AdminSettings = () => {
           </div>
         );
 
+      case "admins":
+        return (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-medium">Admin Management</h3>
+              <button
+                onClick={() => setShowCreateAdminModal(true)}
+                className="btn-primary flex items-center gap-2"
+              >
+                <FiShield className="h-4 w-4" />
+                Create Admin
+              </button>
+            </div>
+            <p className="text-sm text-gray-600">
+              Manage admin accounts for your store.
+            </p>
+
+            <div className="space-y-4">
+              {admins.length > 0 ? (
+                admins.map((admin) => (
+                  <div
+                    key={admin.id}
+                    className="flex flex-col gap-4 p-4 bg-gray-50 rounded-lg md:flex-row md:items-center md:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium">{admin.name}</p>
+                      <p className="text-sm text-gray-500">{admin.email}</p>
+                      {admin.phone && (
+                        <p className="text-sm text-gray-400">{admin.phone}</p>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                        {admin.role === 'super-admin' ? 'Super Admin' : 'Admin'}
+                      </span>
+                      <button
+                        onClick={() => handleEditAdmin(admin)}
+                        className="px-3 py-1 text-sm bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAdmin(admin.id)}
+                        disabled={admin.role === 'super-admin'}
+                        className="px-3 py-1 text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-gray-500 py-8">
+                  No admins created yet
+                </p>
+              )}
+            </div>
+          </div>
+        );
+
       case "security":
         return (
           <div className="space-y-6">
@@ -598,35 +834,57 @@ const AdminSettings = () => {
 
       <div className="flex-1 overflow-y-auto">
         <div className="p-8">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Settings
-              </h1>
-              <p className="text-gray-600">Configure your store settings</p>
+          {loading && (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="btn-primary flex items-center gap-2"
-            >
-              <FiSave className="h-4 w-4" />
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
+          )}
 
-          {/* Settings Navigation */}
-          <div className="bg-white rounded-xl shadow-sm mb-6">
-            <div className="border-b">
-              <nav className="flex space-x-8 px-6" aria-label="Tabs">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`
+          {!loading && (
+            <>
+              {/* Role Warning */}
+              {userRole !== "super-admin" && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Note:</strong> You are logged in as a regular admin.
+                    Only super-admins can modify settings.
+                  </p>
+                </div>
+              )}
+
+              {/* Header */}
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                    Settings
+                  </h1>
+                  <p className="text-gray-600">Configure your store settings</p>
+                </div>
+                <button
+                  onClick={handleSave}
+                  disabled={saving || userRole !== "super-admin"}
+                  className="btn-primary flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FiSave className="h-4 w-4" />
+                  {saving
+                    ? "Saving..."
+                    : userRole !== "super-admin"
+                      ? "No Permission"
+                      : "Save Changes"}
+                </button>
+              </div>
+
+              {/* Settings Navigation */}
+              <div className="bg-white rounded-xl shadow-sm mb-6">
+                <div className="border-b">
+                  <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                    {tabs.map((tab) => {
+                      const Icon = tab.icon;
+                      return (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`
                         py-4 px-1 border-b-2 font-medium text-sm flex items-center gap-2
                         ${
                           activeTab === tab.id
@@ -634,49 +892,55 @@ const AdminSettings = () => {
                             : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                         }
                       `}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {tab.name}
+                        >
+                          <Icon className="h-5 w-5" />
+                          {tab.name}
+                        </button>
+                      );
+                    })}
+                  </nav>
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">{renderTabContent()}</div>
+              </div>
+
+              {/* Danger Zone */}
+              <div className="bg-red-50 rounded-xl shadow-sm p-6 border border-red-200">
+                <h2 className="text-lg font-bold text-red-800 mb-4">
+                  Danger Zone
+                </h2>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-red-800">
+                        Export Store Data
+                      </p>
+                      <p className="text-sm text-red-600">
+                        Download all your store data as JSON
+                      </p>
+                    </div>
+                    <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                      Export Data
                     </button>
-                  );
-                })}
-              </nav>
-            </div>
-
-            {/* Tab Content */}
-            <div className="p-6">{renderTabContent()}</div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="bg-red-50 rounded-xl shadow-sm p-6 border border-red-200">
-            <h2 className="text-lg font-bold text-red-800 mb-4">Danger Zone</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-red-800">Export Store Data</p>
-                  <p className="text-sm text-red-600">
-                    Download all your store data as JSON
-                  </p>
-                </div>
-                <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                  Export Data
-                </button>
-              </div>
-              <div className="border-t border-red-200 pt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium text-red-800">Delete Store</p>
-                    <p className="text-sm text-red-600">
-                      Permanently delete your store and all data
-                    </p>
                   </div>
-                  <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                    Delete Store
-                  </button>
+                  <div className="border-t border-red-200 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-red-800">Delete Store</p>
+                        <p className="text-sm text-red-600">
+                          Permanently delete your store and all data
+                        </p>
+                      </div>
+                      <button className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Delete Store
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -755,6 +1019,233 @@ const AdminSettings = () => {
                   className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:opacity-50"
                 >
                   {sendingBroadcast ? "Sending..." : "Send to All Users"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Admin Modal */}
+      {showCreateAdminModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Create New Admin</h2>
+              <button
+                onClick={() => setShowCreateAdminModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAdmin} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={newAdminData.name}
+                  onChange={(e) =>
+                    setNewAdminData({
+                      ...newAdminData,
+                      name: e.target.value,
+                    })
+                  }
+                  className="input-field"
+                  placeholder="Admin name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={newAdminData.email}
+                  onChange={(e) =>
+                    setNewAdminData({
+                      ...newAdminData,
+                      email: e.target.value,
+                    })
+                  }
+                  className="input-field"
+                  placeholder="admin@example.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={newAdminData.password}
+                  onChange={(e) =>
+                    setNewAdminData({
+                      ...newAdminData,
+                      password: e.target.value,
+                    })
+                  }
+                  className="input-field"
+                  placeholder="Enter password"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone (Optional)
+                </label>
+                <input
+                  type="tel"
+                  value={newAdminData.phone}
+                  onChange={(e) =>
+                    setNewAdminData({
+                      ...newAdminData,
+                      phone: e.target.value,
+                    })
+                  }
+                  className="input-field"
+                  placeholder="+1 (555) 123-4567"
+                />
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateAdminModal(false)}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creatingAdmin}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:opacity-50"
+                >
+                  {creatingAdmin ? "Creating..." : "Create Admin"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditAdminModal && editingAdmin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full mx-4">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Edit Admin</h2>
+              <button
+                onClick={() => {
+                  setShowEditAdminModal(false);
+                  setEditingAdmin(null);
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminUpdate} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editingAdmin.name}
+                  onChange={(e) =>
+                    setEditingAdmin({ ...editingAdmin, name: e.target.value })
+                  }
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editingAdmin.email}
+                  onChange={(e) =>
+                    setEditingAdmin({ ...editingAdmin, email: e.target.value })
+                  }
+                  className="input-field"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={editingAdmin.phone || ""}
+                  onChange={(e) =>
+                    setEditingAdmin({ ...editingAdmin, phone: e.target.value })
+                  }
+                  className="input-field"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password (leave blank to keep current)
+                </label>
+                <input
+                  type="password"
+                  value={editingAdmin.password}
+                  onChange={(e) =>
+                    setEditingAdmin({ ...editingAdmin, password: e.target.value })
+                  }
+                  className="input-field"
+                  placeholder="New password"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Role
+                </label>
+                <select
+                  value={editingAdmin.role}
+                  onChange={(e) =>
+                    setEditingAdmin({ ...editingAdmin, role: e.target.value })
+                  }
+                  className="input-field"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="super-admin">Super Admin</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditAdminModal(false);
+                    setEditingAdmin(null);
+                  }}
+                  className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updatingAdmin}
+                  className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-medium disabled:opacity-50"
+                >
+                  {updatingAdmin ? "Updating..." : "Save Changes"}
                 </button>
               </div>
             </form>

@@ -7,7 +7,6 @@ const addOTPColumns = async () => {
   try {
     console.log('Checking and adding OTP columns to Users table...');
 
-    // Check if otp column exists
     const otpColumnExists = await sequelize.query(
       "SELECT column_name FROM information_schema.columns WHERE table_name = 'Users' AND column_name = 'otp'",
       { type: QueryTypes.SELECT }

@@ -5,10 +5,12 @@ import {
   Route,
   NavLink,
   Link,
+  useLocation,
 } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
+import { StoreSettingsProvider, useStoreSettings } from "./context/StoreSettingsContext";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -53,6 +55,13 @@ const VerifyEmailPage = () => (
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
+  const location = useLocation();
+  const { settings: storeSettings } = useStoreSettings();
+
+  // Hide navbar for admin routes
+  if (location.pathname.startsWith("/admin")) {
+    return null;
+  }
 
   const navLinkClass = ({ isActive }) =>
     `transition-colors ${
@@ -70,7 +79,7 @@ const Navbar = () => {
             end
             className="text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors"
           >
-            E-Store
+            {storeSettings.storeName || "E-Store"}
           </NavLink>
           <div className="flex items-center space-x-6">
             <NavLink to="/" end className={navLinkClass}>
@@ -99,7 +108,7 @@ const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center space-x-4">
-                {user?.role === "admin" && (
+                {(user?.role === "admin" || user?.role === "super-admin") && (
                   <NavLink to="/admin" className={navLinkClass}>
                     Admin
                   </NavLink>
@@ -139,12 +148,16 @@ const Navbar = () => {
 
 // Footer Component
 const Footer = () => {
+  const { settings: storeSettings } = useStoreSettings();
+
   return (
     <footer className="bg-white mt-16 py-8 border-t">
       <div className="container-custom">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="font-bold text-lg mb-4 text-primary-600">E-Store</h3>
+            <h3 className="font-bold text-lg mb-4 text-primary-600">
+              {storeSettings.storeName || "E-Store"}
+            </h3>
             <p className="text-gray-500 text-sm">
               Your one-stop shop for everything you need.
             </p>
@@ -229,7 +242,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="border-t mt-8 pt-8 text-center text-gray-400 text-sm">
-          © 2026 E-Store. All rights reserved.
+          © {new Date().getFullYear()} {storeSettings.storeName || "E-Store"}. All rights reserved.
         </div>
       </div>
     </footer>
@@ -246,7 +259,11 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
       if (!isAuthenticated) {
         toast.error("Please login to access this page");
         navigate("/login");
-      } else if (requireAdmin && user?.role !== "admin") {
+      } else if (
+        requireAdmin &&
+        user?.role !== "admin" &&
+        user?.role !== "super-admin"
+      ) {
         toast.error("Admin access required");
         navigate("/");
       }
@@ -269,9 +286,10 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <CartProvider>
-          <div className="min-h-screen bg-gray-50 flex flex-col">
-            <Navbar />
+        <StoreSettingsProvider>
+          <CartProvider>
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+              <Navbar />
 
             {/* Main Content */}
             <main className="flex-grow">
@@ -425,9 +443,11 @@ function App() {
             />
           </div>
         </CartProvider>
-      </AuthProvider>
-    </Router>
+      </StoreSettingsProvider>
+    </AuthProvider>
+  </Router>
   );
 }
+
 
 export default App;

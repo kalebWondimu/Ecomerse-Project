@@ -245,7 +245,7 @@ const OrderConfirmationPage = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 Order Details
               </h1>
-              <p className="text-gray-600">Order #{order.id}</p>
+              <p className="text-gray-600">Order #ORD-{order.id}</p>
             </div>
             <div className="text-right">
               <span

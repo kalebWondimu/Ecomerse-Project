@@ -59,7 +59,7 @@ const AdminOrders = () => {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
 
-      toast.success(`Order #${orderId} status updated to ${newStatus}`);
+      toast.success(`Order #ORD-${orderId} status updated to ${newStatus}`);
     } catch (error) {
       toast.error("Failed to update order status");
     } finally {
@@ -388,7 +388,7 @@ const AdminOrders = () => {
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold">
-                  Order #{selectedOrder.id}
+                  Order #ORD-{selectedOrder.id}
                 </h2>
                 <button
                   onClick={() => setShowDetailsModal(false)}
@@ -440,7 +440,9 @@ const AdminOrders = () => {
                       className="flex justify-between items-center py-2 border-b last:border-0"
                     >
                       <div>
-                        <p className="font-medium">Product #{item.productId}</p>
+                        <p className="font-medium">
+                          {item.productName || `Product #${item.productId}`}
+                        </p>
                         <p className="text-sm text-gray-500">
                           Qty: {item.quantity} × ${item.price}
                         </p>

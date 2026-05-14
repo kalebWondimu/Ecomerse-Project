@@ -65,12 +65,22 @@ const AdminUsers = () => {
       const total = data.length;
       const admins = data.filter((u) => u.role === "admin").length;
       const regularUsers = data.filter((u) => u.role === "user").length;
+      const today = new Date();
+      const todayStart = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+      );
+      const activeToday = data.filter((u) => {
+        const createdAt = new Date(u.createdAt);
+        return createdAt >= todayStart;
+      }).length;
 
       setStats({
         total,
         admins,
         users: regularUsers,
-        activeToday: Math.floor(Math.random() * 10) + 5, // Placeholder - implement real logic
+        activeToday,
       });
     } catch (error) {
       console.error("Failed to fetch users:", error);

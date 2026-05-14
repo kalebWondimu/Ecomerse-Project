@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
+    isAdmin: user?.role === "admin" || user?.role === "super-admin",
     login,
     register,
     verifyOTP,

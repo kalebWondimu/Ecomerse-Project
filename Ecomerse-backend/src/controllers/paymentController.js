@@ -105,7 +105,7 @@ exports.initiateChapPayment = async (req, res) => {
       return_url: `${frontendUrl}/payment-success`,
       customization: {
         title: 'E-commerce Order Payment',
-        description: `Order #${orderId}`,
+        description: `Order #ORD-${orderId}`,
       },
     };
 
@@ -170,7 +170,7 @@ exports.initiateCBEPayment = async (req, res) => {
       orderId: `ORD-${String(orderId).padStart(6, '0')}`,
       amount: amount,
       currency: 'ETB',
-      description: `E-commerce Order #${orderId}`,
+      description: `E-commerce Order #ORD-${orderId}`,
       callbackUrl: `${backendUrl}/api/payments/cbe/callback`,
       returnUrl: `${frontendUrl}/payment-success`,
     };

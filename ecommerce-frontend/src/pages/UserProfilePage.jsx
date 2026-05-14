@@ -506,7 +506,7 @@ const UserProfilePage = () => {
                               Order #
                             </span>
                             <span className="font-mono text-sm ml-1">
-                              {order.id}
+                              ORD-{order.id}
                             </span>
                           </div>
                           <div className="flex items-center space-x-3">

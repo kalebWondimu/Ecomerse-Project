@@ -1,26 +1,38 @@
 const nodemailer = require('nodemailer');
 require('dotenv').config();
+const { StoreSettings } = require('../models');
 
 // Create transporter
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,
-  secure: false, // true for 465, false for 587
-  auth: {
-    user: process.env.EMAIL_USER, // Your Gmail address
-    pass: process.env.EMAIL_PASS  // Your Gmail App Password
-  },
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+const createTransporter = async () => {
+  const storeSettings = await StoreSettings.findOne();
+  const authUser = process.env.EMAIL_USER || storeSettings?.storeEmail;
 
-// Verify connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-  } else {
+  if (!authUser || !process.env.EMAIL_PASS) {
+    throw new Error('EMAIL_USER and EMAIL_PASS must be configured for SMTP transport');
   }
-});
+
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // true for 465, false for 587
+    auth: {
+      user: authUser,
+      pass: process.env.EMAIL_PASS  // Your Gmail App Password
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+};
+
+let transporter;
+
+const getTransporter = async () => {
+  if (!transporter) {
+    transporter = await createTransporter();
+  }
+  return transporter;
+};
 
 const emailService = {
   // Send password reset email
@@ -131,7 +143,8 @@ const emailService = {
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      const transport = await getTransporter();
+      const info = await transport.sendMail(mailOptions);
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('Error sending email:', error);
@@ -182,7 +195,8 @@ const emailService = {
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      const transport = await getTransporter();
+      const info = await transport.sendMail(mailOptions);
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('Error sending welcome email:', error);
@@ -289,19 +303,26 @@ const emailService = {
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      const transport = await getTransporter();
+      const info = await transport.sendMail(mailOptions);
       return { success: true, messageId: info.messageId };
     } catch (error) {
-      console.error('Error sending OTP email:', error);
+      console.error('Error sending delivery email:', error);
       throw error;
     }
   },
 
   sendOrderDeliveredEmail: async (email, orderId, items, totalAmount, shippingAddress) => {
+    const storeSettings = await StoreSettings.findOne();
+    const storeName = storeSettings?.storeName || 'E-Store';
+    const storeEmail = storeSettings?.storeEmail || process.env.EMAIL_USER;
+    const emailSignature = storeSettings?.emailSettings?.emailSignature || 'The E-Store Team';
+
     const mailOptions = {
-      from: `"E-Store Support" <${process.env.EMAIL_USER}>`,
+      from: `"${storeName} Support" <${process.env.EMAIL_USER}>`,
+      replyTo: storeEmail,
       to: email,
-      subject: `Your Order #${orderId} Has Been Delivered`,
+      subject: `Your Order #ORD-${orderId} Has Been Delivered`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -327,7 +348,7 @@ const emailService = {
             </div>
             <div class="content">
               <div class="badge">Delivered</div>
-              <p>Good news! Your order <strong>#${orderId}</strong> has been marked as delivered.</p>
+              <p>Good news! Your order <strong>#ORD-${orderId}</strong> has been marked as delivered.</p>
               <p>Here are the items included in your shipment:</p>
               <table class="table">
                 <thead>
@@ -357,14 +378,15 @@ const emailService = {
               <p>If you have any questions or need assistance, reply to this email and we will help you.</p>
             </div>
             <div class="footer">
-              <p>Thank you for shopping with E-Store.</p>
-              <p>&copy; ${new Date().getFullYear()} E-Store. All rights reserved.</p>
+              <p>Thank you for shopping with ${storeName}.</p>
+              <p>${emailSignature}</p>
+              <p>&copy; ${new Date().getFullYear()} ${storeName}. All rights reserved.</p>
             </div>
           </div>
         </body>
         </html>
       `,
-      text: `Your order #${orderId} has been delivered.
+      text: `Your order #ORD-${orderId} has been delivered.
 
 Items:
 ${items
@@ -378,11 +400,15 @@ Total Paid: $${(totalAmount || 0).toFixed(2)}
 Shipping Address: ${shippingAddress}
 
 If you have questions, reply to this email.
+
+Thank you for shopping with ${storeName}.
+${emailSignature}
 `,
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      const transport = await getTransporter();
+      const info = await transport.sendMail(mailOptions);
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('Error sending delivery email:', error);
@@ -391,41 +417,60 @@ If you have questions, reply to this email.
   },
 
   sendBroadcastEmail: async (subject, message) => {
-    const allUsers = await require('../models').User.findAll({
-      where: { email: { [require('sequelize').Op.ne]: null } },
-      attributes: ['email'],
-    });
-
-    const emailAddresses = allUsers
-      .map((user) => user.email)
-      .filter(Boolean);
-
-    if (emailAddresses.length === 0) {
-      throw new Error('No users with valid email addresses found.');
-    }
-
-    const mailOptions = {
-      from: `"E-Store Admin" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
-      bcc: emailAddresses,
-      subject: subject,
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333;">
-          <h2>${subject}</h2>
-          <p>${message.replace(/\n/g, '<br/>')}</p>
-          <hr />
-          <p>If you have any questions, reply to this email.</p>
-        </div>
-      `,
-      text: `${subject}\n\n${message}`,
-    };
-
     try {
-      const info = await transporter.sendMail(mailOptions);
-      return { success: true, messageId: info.messageId };
+      const { User } = require('../models');
+      const allUsers = await User.findAll({
+        where: { email: { [require('sequelize').Op.ne]: null } },
+        attributes: ['email'],
+      });
+
+      const emailAddresses = allUsers
+        .map((user) => user.email)
+        .filter(Boolean);
+
+      if (emailAddresses.length === 0) {
+        throw new Error('No users with valid email addresses found.');
+      }
+
+      const transport = await getTransporter();
+      // Verify transporter before sending
+      await transport.verify();
+
+      const { StoreSettings } = require('../models');
+      const settings = await StoreSettings.findOne();
+      const mailStoreName = settings?.storeName || 'E-Store';
+
+      const mailOptions = {
+        from: `"${mailStoreName} Admin" <${process.env.EMAIL_USER}>`,
+        to: process.env.EMAIL_USER,
+        bcc: emailAddresses,
+        subject: subject,
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: 0 auto;">
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+              <h2 style="margin: 0; color: #222;">${subject}</h2>
+            </div>
+            <div style="line-height: 1.6; color: #555;">
+              ${message.replace(/\n/g, '<br/>')}
+            </div>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+            <p style="font-size: 12px; color: #999; margin: 0;">
+              If you have any questions, reply to this email or contact support.
+            </p>
+            <p style="font-size: 12px; color: #999; margin: 0;">
+              &copy; ${new Date().getFullYear()} ${mailStoreName}. All rights reserved.
+            </p>
+          </div>
+        `,
+        text: `${subject}\n\n${message}\n\n${new Date().getFullYear()} ${mailStoreName}. All rights reserved.`,
+      };
+
+      const info = await transport.sendMail(mailOptions);
+      console.log('Broadcast email sent successfully:', info.messageId);
+      return { success: true, messageId: info.messageId, recipientCount: emailAddresses.length };
     } catch (error) {
       console.error('Error sending broadcast email:', error);
-      throw error;
+      throw new Error(`Failed to send broadcast email: ${error.message}`);
     }
   },
 
@@ -452,7 +497,8 @@ If you have questions, reply to this email.
     };
 
     try {
-      const info = await transporter.sendMail(mailOptions);
+      const transport = await getTransporter();
+      const info = await transport.sendMail(mailOptions);
       return { success: true, messageId: info.messageId };
     } catch (error) {
       console.error('Error sending contact email:', error);
