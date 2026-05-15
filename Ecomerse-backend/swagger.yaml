@@ -155,6 +155,48 @@ components:
           type: string
         orderId:
           type: integer
+    StoreSettings:
+      type: object
+      properties:
+        id:
+          type: integer
+        storeName:
+          type: string
+        storeEmail:
+          type: string
+        phoneNumber:
+          type: string
+        currency:
+          type: string
+        websiteUrl:
+          type: string
+        emailSettings:
+          type: object
+          properties:
+            emailSignature:
+              type: string
+        securitySettings:
+          type: object
+          properties:
+            allowRegistration:
+              type: boolean
+    ContactMessage:
+      type: object
+      required:
+        - name
+        - email
+        - subject
+        - message
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        subject:
+          type: string
+        message:
+          type: string
 
 security:
   - bearerAuth: []
@@ -335,6 +377,40 @@ paths:
           description: Bad request
         "401":
           description: Invalid or expired token
+
+  /api/contact:
+    post:
+      summary: Send a contact message via the site contact form
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactMessage'
+      responses:
+        "200":
+          description: Contact message sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Bad request
+
+  /api/settings:
+    get:
+      summary: Get public store settings
+      responses:
+        "200":
+          description: Store settings retrieved successfully
+          content:
+            application/json:
+              $ref: '#/components/schemas/StoreSettings'
+        "500":
+          description: Failed to retrieve settings
 
   /api/users/profile:
     get:
@@ -581,10 +657,23 @@ paths:
       responses:
         "200":
           description: OK
+    put:
+      security:
+        - bearerAuth: []
+      summary: Hide an order from customer history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Order hidden successfully
     delete:
       security:
         - bearerAuth: []
-      summary: Cancel order (admin)
+      summary: Cancel order (admin/user)
       parameters:
         - name: id
           in: path
@@ -689,6 +778,89 @@ paths:
       responses:
         "200":
           description: OK
+  /api/reviews/{id}/helpful:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Mark a review as helpful
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Review marked helpful
+  /api/reviews/{id}/reply:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Add a reply to a review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        "201":
+          description: Reply created
+  /api/reviews/{id}/reply/{replyId}:
+    put:
+      security:
+        - bearerAuth: []
+      summary: Edit a review reply
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        "200":
+          description: Reply updated
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Delete a review reply
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: replyId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Reply deleted
 
   /api/admin/users:
     get:
@@ -716,6 +888,124 @@ paths:
       responses:
         "200":
           description: OK
+
+  /api/admin/broadcast-email:
+    post:
+      security:
+        - bearerAuth: []
+      summary: Send broadcast email to customers (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subject:
+                  type: string
+                message:
+                  type: string
+      responses:
+        "200":
+          description: Broadcast email sent
+  /api/admin/settings:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get admin store settings
+      responses:
+        "200":
+          description: Store settings retrieved successfully
+          content:
+            application/json:
+              $ref: '#/components/schemas/StoreSettings'
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update admin store settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StoreSettings'
+      responses:
+        "200":
+          description: Settings updated successfully
+  /api/admin/admins:
+    get:
+      security:
+        - bearerAuth: []
+      summary: Get admins and super-admins
+      responses:
+        "200":
+          description: List of admins
+    post:
+      security:
+        - bearerAuth: []
+      summary: Create a new admin user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        "201":
+          description: Admin created successfully
+  /api/admin/admins/{adminId}:
+    put:
+      security:
+        - bearerAuth: []
+      summary: Update an admin user
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+      responses:
+        "200":
+          description: Admin updated successfully
+    delete:
+      security:
+        - bearerAuth: []
+      summary: Delete an admin user
+      parameters:
+        - name: adminId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Admin deleted successfully
 
   /api/payments/telebirr/initiate:
     post:

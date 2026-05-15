@@ -234,11 +234,19 @@ exports.verifyOTP = async (req, res) => {
     user.isVerified = true;
     await user.save();
     
+    // Send welcome email on first OTP verification
+    try {
+      await emailService.sendWelcomeEmail(user.email, user.name);
+    } catch (welcomeError) {
+      console.error('Failed to send welcome email:', welcomeError);
+    }
+
     // Generate auth token
     const authToken = generateToken(user.id, '1h', 'auth');
     
     res.json({
-      message: 'Email verified successfully',
+      message: 'Email verified successfully. Welcome to our store!',
+      welcomeMessage: `Welcome to ${user.name}! Your account is now verified and ready to use.`,
       id: user.id,
       name: user.name,
       email: user.email,

@@ -67,7 +67,11 @@ export const AuthProvider = ({ children }) => {
       };
 
       setUser(userData);
-      return { user: userData, token: data.token };
+      return {
+        user: userData,
+        token: data.token,
+        welcomeMessage: data.welcomeMessage,
+      };
     } catch (error) {
       throw error;
     }

@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const categories = [
   {
@@ -20,8 +20,19 @@ const categories = [
 ];
 
 const HomePage = () => {
+  const location = useLocation();
+  const welcomeMessage = location.state?.welcomeMessage;
+
   return (
     <div>
+      {welcomeMessage && (
+        <section className="bg-green-50 border border-green-200 text-green-900 px-6 py-4 rounded-xl mx-4 my-6 lg:mx-0">
+          <div className="container-custom flex flex-col gap-2">
+            <h2 className="text-xl font-semibold">Welcome!</h2>
+            <p className="text-sm leading-6">{welcomeMessage}</p>
+          </div>
+        </section>
+      )}
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-primary-600 to-primary-800 text-white py-24">
         <div className="container-custom grid gap-10 lg:grid-cols-2 items-center">

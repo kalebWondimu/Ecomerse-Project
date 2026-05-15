@@ -34,17 +34,25 @@ const getTransporter = async () => {
   return transporter;
 };
 
+const getEmailConfig = async () => {
+  const storeSettings = await StoreSettings.findOne();
+  const storeName = storeSettings?.storeName || 'E-Store';
+  const storeEmail = storeSettings?.storeEmail || process.env.EMAIL_USER;
+  const emailSignature = storeSettings?.emailSettings?.emailSignature || `${storeName} Team`;
+  return { storeSettings, storeName, storeEmail, emailSignature };
+};
+
 const emailService = {
   // Send password reset email
   sendPasswordResetEmail: async (email, resetToken) => {
-    // Use your frontend URL - change this to your actual frontend URL
+    const { storeName, emailSignature } = await getEmailConfig();
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
     
     const mailOptions = {
-      from: `"E-Store Support" <${process.env.EMAIL_USER}>`,
+      from: `"${storeName} Support" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Password Reset Request - E-Store',
+      subject: 'Password Reset Request - ' + storeName,
       html: `
         <!DOCTYPE html>
         <html>
@@ -132,14 +140,15 @@ const emailService = {
                     <p style="font-size: 14px;">For security, never share this link with anyone. Our team will never ask for your password.</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; ${new Date().getFullYear()} E-Store. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${storeName}. All rights reserved.</p>
+                    <p>${emailSignature}</p>
                     <p>This is an automated message, please do not reply to this email.</p>
                 </div>
             </div>
         </body>
         </html>
       `,
-      text: `Password Reset Request\n\nHello,\n\nWe received a request to reset your password. Click the link below to create a new password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`
+      text: `Password Reset Request\n\nHello,\n\nWe received a request to reset your password. Click the link below to create a new password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.\n\n${emailSignature}`
     };
 
     try {
@@ -154,10 +163,11 @@ const emailService = {
 
   // Send welcome email (optional)
   sendWelcomeEmail: async (email, name) => {
+    const { storeName, emailSignature } = await getEmailConfig();
     const mailOptions = {
-      from: `"E-Store Team" <${process.env.EMAIL_USER}>`,
+      from: `"${storeName} Team" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Welcome to E-Store!',
+      subject: `Welcome to ${storeName}!`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -173,10 +183,10 @@ const emailService = {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to E-Store, ${name}! 🎉</h1>
+                    <h1>Welcome to ${storeName}, ${name}! 🎉</h1>
                 </div>
                 <div class="content">
-                    <p>Thank you for joining E-Store! We're excited to have you on board.</p>
+                    <p>Thank you for joining ${storeName}! We're excited to have you on board.</p>
                     <p>Start exploring our amazing products and exclusive deals today!</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products" 
@@ -186,7 +196,8 @@ const emailService = {
                     </div>
                 </div>
                 <div class="footer">
-                    <p>&copy; ${new Date().getFullYear()} E-Store. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${storeName}. All rights reserved.</p>
+                    <p>${emailSignature}</p>
                 </div>
             </div>
         </body>
@@ -206,10 +217,11 @@ const emailService = {
 
   // Send OTP verification email
   sendOTPVerificationEmail: async (email, otp) => {
+    const { storeName, emailSignature } = await getEmailConfig();
     const mailOptions = {
-      from: `"E-Store Support" <${process.env.EMAIL_USER}>`,
+      from: `"${storeName} Support" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Verify Your Email - E-Store',
+      subject: `Verify Your Email - ${storeName}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -285,21 +297,22 @@ const emailService = {
 
                     <p>This code will expire in 10 minutes for security reasons.</p>
 
-                    <p class="warning">⚠️ If you didn't create an account with E-Store, please ignore this email.</p>
+                    <p class="warning">⚠️ If you didn't create an account with ${storeName}, please ignore this email.</p>
 
                     <hr style="margin: 30px 0; border: none; border-top: 1px solid #e0e0e0;">
 
                     <p style="font-size: 14px;">For security, never share this code with anyone. Our team will never ask for your verification code.</p>
                 </div>
                 <div class="footer">
-                    <p>&copy; ${new Date().getFullYear()} E-Store. All rights reserved.</p>
+                    <p>&copy; ${new Date().getFullYear()} ${storeName}. All rights reserved.</p>
+                    <p>${emailSignature}</p>
                     <p>This is an automated message, please do not reply to this email.</p>
                 </div>
             </div>
         </body>
         </html>
       `,
-      text: `Email Verification\n\nHello,\n\nThank you for registering with E-Store! Your OTP verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account, please ignore this email.`
+      text: `Email Verification\n\nHello,\n\nThank you for registering with ${storeName}! Your OTP verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account, please ignore this email.\n\n${emailSignature}`
     };
 
     try {
@@ -439,6 +452,7 @@ ${emailSignature}
       const { StoreSettings } = require('../models');
       const settings = await StoreSettings.findOne();
       const mailStoreName = settings?.storeName || 'E-Store';
+      const emailSignature = settings?.emailSettings?.emailSignature || 'The E-Store Team';
 
       const mailOptions = {
         from: `"${mailStoreName} Admin" <${process.env.EMAIL_USER}>`,
@@ -458,11 +472,14 @@ ${emailSignature}
               If you have any questions, reply to this email or contact support.
             </p>
             <p style="font-size: 12px; color: #999; margin: 0;">
+              ${emailSignature}
+            </p>
+            <p style="font-size: 12px; color: #999; margin: 0;">
               &copy; ${new Date().getFullYear()} ${mailStoreName}. All rights reserved.
             </p>
           </div>
         `,
-        text: `${subject}\n\n${message}\n\n${new Date().getFullYear()} ${mailStoreName}. All rights reserved.`,
+        text: `${subject}\n\n${message}\n\n${emailSignature}\n\n${new Date().getFullYear()} ${mailStoreName}. All rights reserved.`,
       };
 
       const info = await transport.sendMail(mailOptions);

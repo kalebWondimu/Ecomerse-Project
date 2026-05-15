@@ -124,12 +124,14 @@ const RegisterPage = () => {
 
     try {
       setLoading(true);
-      await verifyOTP({
+      const result = await verifyOTP({
         email: userEmail,
         otp: otpData.otp,
       });
-      toast.success("Email verified successfully!");
-      navigate("/");
+      toast.success(result.welcomeMessage || "Email verified successfully!");
+      navigate("/", {
+        state: { welcomeMessage: result.welcomeMessage },
+      });
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
