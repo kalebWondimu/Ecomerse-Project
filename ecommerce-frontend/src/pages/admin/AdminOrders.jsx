@@ -14,7 +14,7 @@ import {
   FiDownload,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -25,10 +25,29 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const selectedId =
+      location.state?.selectedOrderId || queryParams.get("orderId");
+
+    if (selectedId && orders.length > 0) {
+      const order = orders.find(
+        (o) => o.id?.toString() === selectedId?.toString(),
+      );
+      if (order) {
+        setSelectedOrder(order);
+        setShowDetailsModal(true);
+      }
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.search, orders, navigate, location.pathname]);
 
   const fetchOrders = async () => {
     try {
