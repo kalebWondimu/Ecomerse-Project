@@ -32,6 +32,10 @@ exports.register = async (req, res) => {
       isVerified: false
     });
     
+    // Log OTP for testing/debugging
+    console.log(`\n🔐 OTP for ${email}: ${otp}`);
+    console.log(`⏱️  OTP expires in 10 minutes\n`);
+    
     // Send OTP via email
     try {
       await emailService.sendOTPVerificationEmail(email, otp);
@@ -94,11 +98,17 @@ exports.forgotPassword = async (req, res) => {
     
     
     const resetToken = generateToken(user.id, '1h', 'reset');
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
     
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
     await user.save();
     
+    // Log reset link for testing/debugging
+    console.log(`\n🔗 Password reset link for ${email}:`);
+    console.log(`${resetUrl}`);
+    console.log(`⏱️  Link expires in 1 hour\n`);
     
     try {
       await emailService.sendPasswordResetEmail(email, resetToken);
@@ -285,6 +295,10 @@ exports.resendOTP = async (req, res) => {
     user.otp = otp;
     user.otpExpires = otpExpires;
     await user.save();
+    
+    // Log OTP for testing/debugging
+    console.log(`\n🔐 OTP for ${email}: ${otp}`);
+    console.log(`⏱️  OTP expires in 10 minutes\n`);
     
     // Send OTP via email
     try {
