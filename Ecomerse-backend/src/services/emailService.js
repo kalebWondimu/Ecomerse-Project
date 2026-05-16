@@ -45,7 +45,13 @@ const getEmailConfig = async () => {
 const emailService = {
   // Send password reset email
   sendPasswordResetEmail: async (email, resetToken) => {
-    const { storeName, emailSignature } = await getEmailConfig();
+    const storeSettings = await StoreSettings.findOne();
+    const storeName = storeSettings?.storeName || 'E-Store';
+    const emailSignature = storeSettings?.emailSettings?.emailSignature || `${storeName} Team`;
+    const resetTitle = storeSettings?.emailSettings?.passwordResetMessageTitle || '🔐 Password Reset Request';
+    const resetBody = (storeSettings?.emailSettings?.passwordResetMessageBody || 'We received a request to reset your password. Click the button below to create a new password. This link will expire in 1 hour for security reasons.')
+      .replace('{storeName}', storeName);
+    
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
     
@@ -118,11 +124,11 @@ const emailService = {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>🔐 Password Reset Request</h1>
+                    <h1>${resetTitle}</h1>
                 </div>
                 <div class="content">
                     <p>Hello,</p>
-                    <p>We received a request to reset your password for your E-Store account. Click the button below to create a new password:</p>
+                    <p>${resetBody}</p>
                     
                     <div style="text-align: center;">
                         <a href="${resetUrl}" class="button">Reset Password</a>
@@ -163,7 +169,15 @@ const emailService = {
 
   // Send welcome email (optional)
   sendWelcomeEmail: async (email, name) => {
-    const { storeName, emailSignature } = await getEmailConfig();
+    const storeSettings = await StoreSettings.findOne();
+    const storeName = storeSettings?.storeName || 'E-Store';
+    const emailSignature = storeSettings?.emailSettings?.emailSignature || `${storeName} Team`;
+    const welcomeTitle = (storeSettings?.emailSettings?.welcomeMessageTitle || 'Welcome to {storeName}, {userName}! 🎉')
+      .replace('{storeName}', storeName)
+      .replace('{userName}', name);
+    const welcomeBody = (storeSettings?.emailSettings?.welcomeMessageBody || 'Thank you for joining {storeName}! We\'re excited to have you on board.')
+      .replace('{storeName}', storeName);
+    
     const mailOptions = {
       from: `"${storeName} Team" <${process.env.EMAIL_USER}>`,
       to: email,
@@ -183,10 +197,10 @@ const emailService = {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to ${storeName}, ${name}! 🎉</h1>
+                    <h1>${welcomeTitle}</h1>
                 </div>
                 <div class="content">
-                    <p>Thank you for joining ${storeName}! We're excited to have you on board.</p>
+                    <p>${welcomeBody}</p>
                     <p>Start exploring our amazing products and exclusive deals today!</p>
                     <div style="text-align: center; margin: 30px 0;">
                         <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/products" 
@@ -329,7 +343,10 @@ const emailService = {
     const storeSettings = await StoreSettings.findOne();
     const storeName = storeSettings?.storeName || 'E-Store';
     const storeEmail = storeSettings?.storeEmail || process.env.EMAIL_USER;
-    const emailSignature = storeSettings?.emailSettings?.emailSignature || 'The E-Store Team';
+    const emailSignature = storeSettings?.emailSettings?.emailSignature || `${storeName} Team`;
+    const deliveredTitle = (storeSettings?.emailSettings?.orderDeliveredMessageTitle || 'Your Order #{orderId} Has Been Delivered')
+      .replace('{orderId}', orderId);
+    const deliveredBody = storeSettings?.emailSettings?.orderDeliveredMessageBody || 'Good news! Your order has been marked as delivered. Here are the items included in your shipment.';
 
     const mailOptions = {
       from: `"${storeName} Support" <${process.env.EMAIL_USER}>`,
@@ -357,11 +374,12 @@ const emailService = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>Order Delivered</h1>
+              <h1>${deliveredTitle}</h1>
             </div>
             <div class="content">
               <div class="badge">Delivered</div>
-              <p>Good news! Your order <strong>#ORD-${orderId}</strong> has been marked as delivered.</p>
+              <p>${deliveredBody}</p>
+              <p>Order <strong>#ORD-${orderId}</strong></p>
               <p>Here are the items included in your shipment:</p>
               <table class="table">
                 <thead>

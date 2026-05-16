@@ -164,21 +164,53 @@ components:
           type: string
         storeEmail:
           type: string
-        phoneNumber:
+        storePhone:
+          type: string
+        storeAddress:
           type: string
         currency:
           type: string
-        websiteUrl:
+        timezone:
+          type: string
+        language:
           type: string
         emailSettings:
           type: object
           properties:
             emailSignature:
               type: string
+            welcomeEmail:
+              type: boolean
+            passwordReset:
+              type: boolean
+            orderConfirmation:
+              type: boolean
+            welcomeMessageTitle:
+              type: string
+              description: Welcome email title (use {storeName} and {userName} placeholders)
+            welcomeMessageBody:
+              type: string
+              description: Welcome email body (use {storeName} placeholder)
+            passwordResetMessageTitle:
+              type: string
+              description: Password reset email title
+            passwordResetMessageBody:
+              type: string
+              description: Password reset email body (use {storeName} placeholder)
+            orderDeliveredMessageTitle:
+              type: string
+              description: Order delivered email title (use {orderId} placeholder)
+            orderDeliveredMessageBody:
+              type: string
+              description: Order delivered email body
         securitySettings:
           type: object
           properties:
-            allowRegistration:
+            twoFactorAuth:
+              type: boolean
+            sessionTimeout:
+              type: integer
+            requireEmailVerification:
               type: boolean
     ContactMessage:
       type: object

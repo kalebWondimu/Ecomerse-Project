@@ -57,6 +57,12 @@ const StoreSettings = sequelize.define('StoreSettings', {
       adminNotifications: true,
       lowStockAlerts: true,
       emailSignature: 'The E-Store Team',
+      welcomeMessageTitle: 'Welcome to {storeName}, {userName}! 🎉',
+      welcomeMessageBody: 'Thank you for joining {storeName}! We\'re excited to have you on board.',
+      passwordResetMessageTitle: '🔐 Password Reset Request',
+      passwordResetMessageBody: 'We received a request to reset your password. Click the button below to create a new password. This link will expire in 1 hour for security reasons.',
+      orderDeliveredMessageTitle: 'Your Order #{orderId} Has Been Delivered',
+      orderDeliveredMessageBody: 'Good news! Your order has been marked as delivered. Here are the items included in your shipment.',
     },
   },
   securitySettings: {

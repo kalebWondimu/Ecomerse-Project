@@ -60,20 +60,6 @@ const LoginPage = () => {
     }
   };
 
-  const fillDemoCredentials = (role) => {
-    if (role === "user") {
-      setFormData({
-        email: "user@example.com",
-        password: "password123",
-      });
-    } else {
-      setFormData({
-        email: "admin@example.com",
-        password: "password123",
-      });
-    }
-  };
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full">
@@ -226,46 +212,6 @@ const LoginPage = () => {
               )}
             </button>
           </form>
-
-          {/* Demo Credentials */}
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">
-                  Demo Accounts
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("user")}
-                className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left"
-              >
-                <div className="font-semibold text-gray-900">User Account</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  user@example.com
-                </div>
-                <div className="text-xs text-gray-500">password123</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => fillDemoCredentials("admin")}
-                className="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-left"
-              >
-                <div className="font-semibold text-gray-900">Admin Account</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  admin@example.com
-                </div>
-                <div className="text-xs text-gray-500">password123</div>
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

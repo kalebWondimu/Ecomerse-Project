@@ -69,7 +69,10 @@ const AdminSettings = () => {
             freeShippingThreshold: 100,
             internationalShipping: false,
           },
-          email: data.emailSettings || {},
+          email: {
+            ...settings.email,
+            ...data.emailSettings,
+          },
           security: data.securitySettings || {},
         });
 
@@ -157,6 +160,15 @@ const AdminSettings = () => {
       adminNotifications: true,
       lowStockAlerts: true,
       emailSignature: "The E-Store Team",
+      welcomeMessageTitle: "Welcome to {storeName}, {userName}! 🎉",
+      welcomeMessageBody:
+        "Thank you for joining {storeName}! We're excited to have you on board.",
+      passwordResetMessageTitle: "🔐 Password Reset Request",
+      passwordResetMessageBody:
+        "We received a request to reset your password for {storeName}. If you didn't request this, please ignore this email.",
+      orderDeliveredMessageTitle: "Your Order #{orderId} Has Been Delivered",
+      orderDeliveredMessageBody:
+        "Good news! Your order has been marked as delivered. Thank you for shopping with us.",
     },
     security: {
       twoFactorAuth: false,
@@ -617,6 +629,149 @@ const AdminSettings = () => {
                 rows="3"
                 className="input-field"
               />
+            </div>
+
+            <div className="border-t border-gray-200 pt-6 space-y-6">
+              <h4 className="text-base font-medium">Email Template Customization</h4>
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Welcome Email Title
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.email.welcomeMessageTitle}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        email: {
+                          ...settings.email,
+                          welcomeMessageTitle: e.target.value,
+                        },
+                      })
+                    }
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use placeholders: {`{storeName}, {userName}`}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Welcome Email Body
+                  </label>
+                  <textarea
+                    value={settings.email.welcomeMessageBody}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        email: {
+                          ...settings.email,
+                          welcomeMessageBody: e.target.value,
+                        },
+                      })
+                    }
+                    rows="4"
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use placeholder: {`{storeName}`}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password Reset Email Title
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.email.passwordResetMessageTitle}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        email: {
+                          ...settings.email,
+                          passwordResetMessageTitle: e.target.value,
+                        },
+                      })
+                    }
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Customize the password reset subject line.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Password Reset Email Body
+                  </label>
+                  <textarea
+                    value={settings.email.passwordResetMessageBody}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        email: {
+                          ...settings.email,
+                          passwordResetMessageBody: e.target.value,
+                        },
+                      })
+                    }
+                    rows="4"
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use placeholder: {`{storeName}`}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Order Delivered Email Title
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.email.orderDeliveredMessageTitle}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        email: {
+                          ...settings.email,
+                          orderDeliveredMessageTitle: e.target.value,
+                        },
+                      })
+                    }
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Use placeholder: {`{orderId}`}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Order Delivered Email Body
+                  </label>
+                  <textarea
+                    value={settings.email.orderDeliveredMessageBody}
+                    onChange={(e) =>
+                      setSettings({
+                        ...settings,
+                        email: {
+                          ...settings.email,
+                          orderDeliveredMessageBody: e.target.value,
+                        },
+                      })
+                    }
+                    rows="4"
+                    className="input-field"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Customize the delivered order notification body.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         );
