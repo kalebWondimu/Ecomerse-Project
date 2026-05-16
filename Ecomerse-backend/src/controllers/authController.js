@@ -18,39 +18,21 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
     
-    // Generate 6-digit OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    
     const user = await User.create({ 
       name, 
       email, 
       password,
       phone: phone || null,
-      otp,
-      otpExpires,
-      isVerified: false
+      isVerified: true
     });
-    
-    // Log OTP for testing/debugging
-    console.log(`\n🔐 OTP for ${email}: ${otp}`);
-    console.log(`⏱️  OTP expires in 10 minutes\n`);
-    
-    // Send OTP via email
-    try {
-      await emailService.sendOTPVerificationEmail(email, otp);
-    } catch (emailError) {
-      console.error('Failed to send OTP email:', emailError);
-      // Don't fail registration if email fails, but log it
-    }
-    
+
     res.status(201).json({
-      message: 'Registration successful. Please check your email for OTP verification.',
+      message: 'Registration successful. You can now log in.',
       id: user.id,
       name: user.name,
       email: user.email,
       phone: user.phone,
-      isVerified: false
+      isVerified: true
     });
   } catch (error) {
     console.error('Registration error:', error);

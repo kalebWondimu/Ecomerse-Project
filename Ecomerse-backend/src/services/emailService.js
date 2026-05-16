@@ -1,90 +1,42 @@
 const axios = require('axios');
-const nodemailer = require('nodemailer');
 require('dotenv').config();
 const { StoreSettings } = require('../models');
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
-const EMAIL_USER = process.env.EMAIL_USER;
-const EMAIL_PASS = process.env.EMAIL_PASS;
-const EMAIL_FROM = process.env.EMAIL_FROM || EMAIL_USER;
-
-const sendWithSmtp = async (to, subject, htmlContent, storeName) => {
-  if (!EMAIL_USER || !EMAIL_PASS) {
-    console.log('SMTP email not configured. Set EMAIL_USER and EMAIL_PASS.');
-    return false;
-  }
-
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: EMAIL_USER,
-        pass: EMAIL_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `${storeName} <${EMAIL_FROM}>`,
-      to,
-      subject,
-      html: htmlContent,
-    });
-
-    console.log(`✓ Email sent via SMTP to ${to}`);
-    return true;
-  } catch (error) {
-    console.log(`⚠ Email service unavailable (${error.code}). Email would be sent to: ${to}`);
-    console.log(`📧 Email subject: ${subject}`);
-    console.log(`📧 Email recipient: ${to}`);
-    return true;
-  }
-};
+const BREVO_API_KEY = process.env.BREVO_API_KEY || process.env.SENDINBLUE_API_KEY;
+const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || process.env.SENDINBLUE_FROM_EMAIL;
 
 const sendEmail = async (to, subject, htmlContent) => {
   const storeSettings = await StoreSettings.findOne();
   const storeName = storeSettings?.storeName || 'E-Store';
 
-  if (RESEND_API_KEY && RESEND_FROM_EMAIL) {
-    try {
-      await axios.post(
-        'https://api.resend.com/emails',
-        {
-          from: `${storeName} <${RESEND_FROM_EMAIL}>`,
-          to: to,
-          subject: subject,
-          html: htmlContent,
+  if (!BREVO_API_KEY || !BREVO_FROM_EMAIL) {
+    console.log('Brevo not configured. Set BREVO_API_KEY and BREVO_FROM_EMAIL in environment.');
+    return false;
+  }
+
+  try {
+    await axios.post(
+      'https://api.brevo.com/v3/smtp/email',
+      {
+        sender: { name: storeName, email: BREVO_FROM_EMAIL },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: htmlContent,
+      },
+      {
+        headers: {
+          'api-key': BREVO_API_KEY,
+          'Content-Type': 'application/json',
         },
-        {
-          headers: {
-            Authorization: `Bearer ${RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      console.log(`✓ Email sent to ${to}`);
-      return true;
-    } catch (error) {
-      if (error.response?.status === 403 && error.response?.data?.name === 'validation_error') {
-        console.error('Resend validation error: verify your from address domain at resend.com/domains and use a verified RESEND_FROM_EMAIL. Falling back to SMTP if configured.');
-      } else {
-        console.error('Error sending email via Resend:', error.response?.data || error.message);
       }
+    );
 
-      if (EMAIL_USER && EMAIL_PASS) {
-        return await sendWithSmtp(to, subject, htmlContent, storeName);
-      }
-      return false;
-    }
+    console.log(`✓ Email sent via Brevo to ${to}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending email via Brevo:', error.response?.data || error.message);
+    return false;
   }
-
-  if (EMAIL_USER && EMAIL_PASS) {
-    return await sendWithSmtp(to, subject, htmlContent, storeName);
-  }
-
-  console.log('No email provider configured. Set RESEND_API_KEY/RESEND_FROM_EMAIL or EMAIL_USER/EMAIL_PASS.');
-  return false;
 };
 
 const emailService = {
@@ -224,7 +176,7 @@ const emailService = {
       </html>
     `;
 
-    const recipient = process.env.CONTACT_EMAIL || EMAIL_FROM || EMAIL_USER;
+    const recipient = process.env.CONTACT_EMAIL || BREVO_FROM_EMAIL;
     return await sendEmail(recipient, `Contact Form: ${subject}`, htmlContent);
   },
 
@@ -262,10 +214,6 @@ const emailService = {
   },
 
   sendBroadcastEmail: async (recipients, subject, message) => {
-    if (!RESEND_API_KEY) {
-      throw new Error('Resend API key not configured');
-    }
-
     try {
       for (const recipient of recipients) {
         const htmlContent = `<p>${message}</p>`;
