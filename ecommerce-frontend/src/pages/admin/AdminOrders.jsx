@@ -324,7 +324,8 @@ const AdminOrders = () => {
                           <div className="flex items-center gap-2">
                             {getStatusIcon(order.status)}
                             <select
-                              value={order.status || "pending"}
+                              key={`status-${order.id}-${order.status}`}
+                              defaultValue={order.status || "pending"}
                               onChange={(e) =>
                                 handleStatusUpdate(order.id, e.target.value)
                               }
