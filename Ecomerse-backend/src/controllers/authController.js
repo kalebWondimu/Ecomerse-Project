@@ -9,6 +9,7 @@ const generateToken = (id, expires = '1h', type = 'auth') => {
 };
 
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
+const isDev = process.env.NODE_ENV !== 'production';
 
 
 exports.register = async (req, res) => {
