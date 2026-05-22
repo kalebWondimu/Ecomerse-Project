@@ -44,7 +44,7 @@ const emailService = {
     const storeSettings = await StoreSettings.findOne();
     const storeName = storeSettings?.storeName || 'E-Store';
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+    const resetUrl = `${frontendUrl}/#/reset-password/${resetToken}`;
     const isOtp = /^[0-9]{6}$/.test(resetToken);
     const expiryText = isOtp ? '10 minutes' : '1 hour';
 
