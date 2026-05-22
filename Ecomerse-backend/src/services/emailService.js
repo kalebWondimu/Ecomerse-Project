@@ -214,15 +214,22 @@ const emailService = {
   },
 
   sendBroadcastEmail: async (recipients, subject, message) => {
-    try {
-      for (const recipient of recipients) {
-        const htmlContent = `<p>${message}</p>`;
-        await sendEmail(recipient, subject, htmlContent);
+    const failedRecipients = [];
+
+    for (const recipient of recipients) {
+      const htmlContent = `<p>${message}</p>`;
+      const success = await sendEmail(recipient, subject, htmlContent);
+
+      if (!success) {
+        failedRecipients.push(recipient);
       }
-      return true;
-    } catch (error) {
-      throw new Error('Failed to send broadcast email: ' + error.message);
     }
+
+    if (failedRecipients.length > 0) {
+      throw new Error(`Failed to send broadcast email to: ${failedRecipients.join(', ')}`);
+    }
+
+    return true;
   },
 };
 

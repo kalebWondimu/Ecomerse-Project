@@ -87,7 +87,16 @@ exports.sendBroadcastEmail = async (req, res) => {
       return res.status(403).json({ message: 'Only super-admin can send broadcast emails' });
     }
 
-    const result = await emailService.sendBroadcastEmail(subject, message);
+    const users = await User.findAll({ attributes: ['email'] });
+    const recipients = users
+      .map((user) => user.email)
+      .filter((email) => typeof email === 'string' && email.includes('@'));
+
+    if (recipients.length === 0) {
+      return res.status(400).json({ message: 'No valid user emails found for broadcast' });
+    }
+
+    const result = await emailService.sendBroadcastEmail(recipients, subject, message);
     res.json({ success: true, message: 'Broadcast email sent successfully', result });
   } catch (error) {
     console.error('Broadcast email error:', error);
