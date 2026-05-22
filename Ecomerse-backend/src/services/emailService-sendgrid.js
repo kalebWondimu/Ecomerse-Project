@@ -58,6 +58,8 @@ const emailService = {
     const storeName = storeSettings?.storeName || 'E-Store';
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+    const isOtp = /^[0-9]{6}$/.test(resetToken);
+    const expiryText = isOtp ? '10 minutes' : '1 hour';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -67,14 +69,17 @@ const emailService = {
           body { font-family: Arial, sans-serif; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .button { display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+          .code { font-size: 28px; font-weight: bold; color: #007bff; letter-spacing: 5px; margin: 20px 0; }
         </style>
       </head>
       <body>
         <div class="container">
           <h2>Password Reset Request</h2>
-          <p>We received a request to reset your password. Click the button below to create a new password.</p>
+          <p>We received a request to reset your password.</p>
+          ${isOtp ? `<p>Use the code below or click the button to reset your password.</p>
+          <p class="code">${resetToken}</p>` : `<p>Click the button below to reset your password.</p>`}
           <p><a class="button" href="${resetUrl}">Reset Password</a></p>
-          <p>This link will expire in 1 hour for security reasons.</p>
+          <p>This credential will expire in ${expiryText}.</p>
           <p>If you didn't request this, please ignore this email.</p>
           <p>Best regards,<br>${storeName} Team</p>
         </div>

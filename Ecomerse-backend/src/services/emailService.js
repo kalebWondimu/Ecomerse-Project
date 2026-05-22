@@ -45,6 +45,8 @@ const emailService = {
     const storeName = storeSettings?.storeName || 'E-Store';
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
+    const isOtp = /^[0-9]{6}$/.test(resetToken);
+    const expiryText = isOtp ? '10 minutes' : '1 hour';
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -56,17 +58,20 @@ const emailService = {
           body { font-family: Arial, sans-serif; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .button { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
+          .code { font-size: 28px; font-weight: bold; color: #2563eb; letter-spacing: 6px; margin: 20px 0; }
           .footer { font-size: 12px; color: #666; margin-top: 20px; }
         </style>
       </head>
       <body>
         <div class="container">
           <h2>Password Reset Request</h2>
-          <p>We received a request to reset your password. Click the button below to create a new password.</p>
+          <p>We received a request to reset your password.</p>
+          ${isOtp ? `<p>Use the code below or click the button to reset your password.</p>
+          <p class="code">${resetToken}</p>` : `<p>Click the button below to reset your password.</p>`}
           <p><a class="button" href="${resetUrl}">Reset Password</a></p>
           <p>If the button does not work, copy and paste this link into your browser:</p>
           <p><a href="${resetUrl}">${resetUrl}</a></p>
-          <p>This link will expire in 1 hour.</p>
+          <p>This reset credential will expire in ${expiryText}.</p>
           <div class="footer">
             <p>Thank you,<br />${storeName} Team</p>
           </div>

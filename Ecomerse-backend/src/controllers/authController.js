@@ -72,35 +72,33 @@ exports.forgotPassword = async (req, res) => {
     const user = await User.findOne({ where: { email } });
     
     if (!user) {
-  
       return res.json({ 
-        message: 'If an account exists with this email, you will receive a password reset link.' 
+        message: 'If an account exists with this email, you will receive a password reset OTP.' 
       });
     }
-    
-    
-    const resetToken = generateToken(user.id, '1h', 'reset');
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
-    
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    user.resetPasswordToken = otp;
+    user.resetPasswordExpires = otpExpires;
     await user.save();
     
-    // Log reset link for testing/debugging
-    console.log(`\n🔗 Password reset link for ${email}:`);
-    console.log(`${resetUrl}`);
-    console.log(`⏱️  Link expires in 1 hour\n`);
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${otp}`;
+    
+    // Log reset OTP/link for testing/debugging
+    console.log(`\n🔐 Password reset OTP for ${email}: ${otp}`);
+    console.log(`🔗 Password reset link: ${resetUrl}`);
+    console.log(`⏱️  OTP expires in 10 minutes\n`);
     
     try {
-      await emailService.sendPasswordResetEmail(email, resetToken);
+      await emailService.sendPasswordResetEmail(email, otp);
     } catch (emailError) {
-      console.error('Failed to send email:', emailError);
-  
+      console.error('Failed to send password reset email:', emailError);
     }
     
     res.json({ 
-      message: 'If an account exists with this email, you will receive a password reset link.' 
+      message: 'If an account exists with this email, you will receive a password reset OTP.' 
     });
     
   } catch (error) {
@@ -122,33 +120,47 @@ exports.resetPassword = async (req, res) => {
     if (!password || password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
-    
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Reset link has expired. Please request a new one.' });
+
+    let user;
+    let isOtpToken = /^[0-9]{6}$/.test(token);
+
+    if (isOtpToken) {
+      user = await User.findOne({
+        where: {
+          resetPasswordToken: token,
+          resetPasswordExpires: { [Op.gt]: new Date() }
+        }
+      });
+      if (!user) {
+        return res.status(404).json({ message: 'Invalid or expired reset code. Please request a new one.' });
       }
-      return res.status(401).json({ message: 'Invalid reset link. Please request a new one.' });
-    }
-    
-    if (decoded.type !== 'reset') {
-      return res.status(400).json({ message: 'Invalid token type' });
-    }
-    
-    const user = await User.findOne({
-      where: {
-        id: decoded.id,
-        resetPasswordToken: token,
-        resetPasswordExpires: { [Op.gt]: new Date() } // Token not expired
+    } else {
+      let decoded;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET);
+      } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+          return res.status(401).json({ message: 'Reset link has expired. Please request a new one.' });
+        }
+        return res.status(401).json({ message: 'Invalid reset link. Please request a new one.' });
       }
-    });
-    
-    if (!user) {
-      return res.status(404).json({ message: 'Invalid or expired reset link. Please request a new one.' });
+      
+      if (decoded.type !== 'reset') {
+        return res.status(400).json({ message: 'Invalid token type' });
+      }
+      
+      user = await User.findOne({
+        where: {
+          id: decoded.id,
+          resetPasswordToken: token,
+          resetPasswordExpires: { [Op.gt]: new Date() } // Token not expired
+        }
+      });
+      
+      if (!user) {
+        return res.status(404).json({ message: 'Invalid or expired reset link. Please request a new one.' });
+      }
     }
-    
 
     user.password = password;
     user.resetPasswordToken = null;
