@@ -355,7 +355,7 @@ paths:
           description: User not found
   /api/auth/forgot-password:
     post:
-      summary: Generate password reset token
+      summary: Generate password reset OTP and link
       requestBody:
         required: true
         content:
@@ -367,10 +367,10 @@ paths:
                   type: string
       responses:
         "200":
-          description: Token generated
+          description: Password reset OTP and link generated
   /api/auth/reset-password/{token}:
     post:
-      summary: Reset password using token
+      summary: Reset password using reset code or link token
       parameters:
         - name: token
           in: path

@@ -8,6 +8,7 @@ const generateToken = (id, expires = '1h', type = 'auth') => {
   return jwt.sign({ id, type }, process.env.JWT_SECRET, { expiresIn: expires });
 };
 
+const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
 
 exports.register = async (req, res) => {
@@ -18,21 +19,35 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
     
+    const otp = generateOTP();
+    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
     const user = await User.create({ 
       name, 
       email, 
       password,
       phone: phone || null,
-      isVerified: true
+      isVerified: false,
+      otp,
+      otpExpires,
     });
 
+    console.log(`\n🔐 Registration OTP for ${email}: ${otp}`);
+    console.log(`⏱️  OTP expires in 10 minutes\n`);
+
+    try {
+      await emailService.sendOTPVerificationEmail(email, otp);
+    } catch (emailError) {
+      console.error('Failed to send registration OTP email:', emailError);
+    }
+
     res.status(201).json({
-      message: 'Registration successful. You can now log in.',
+      message: 'Registration successful. Please check your email for the 6-digit OTP.',
       id: user.id,
       name: user.name,
       email: user.email,
       phone: user.phone,
-      isVerified: true
+      isVerified: user.isVerified
     });
   } catch (error) {
     console.error('Registration error:', error);
