@@ -32,8 +32,10 @@ exports.register = async (req, res) => {
       otpExpires,
     });
 
-    console.log(`\n🔐 Registration OTP for ${email}: ${otp}`);
-    console.log(`⏱️  OTP expires in 10 minutes\n`);
+    if (isDev) {
+      console.log(`\n🔐 Registration OTP for ${email}: ${otp}`);
+      console.log(`⏱️  OTP expires in 10 minutes\n`);
+    }
 
     try {
       await emailService.sendOTPVerificationEmail(email, otp);
@@ -102,9 +104,11 @@ exports.forgotPassword = async (req, res) => {
     const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${otp}`;
     
     // Log reset OTP/link for testing/debugging
-    console.log(`\n🔐 Password reset OTP for ${email}: ${otp}`);
-    console.log(`🔗 Password reset link: ${resetUrl}`);
-    console.log(`⏱️  OTP expires in 10 minutes\n`);
+    if (isDev) {
+      console.log(`\n🔐 Password reset OTP for ${email}: ${otp}`);
+      console.log(`🔗 Password reset link: ${resetUrl}`);
+      console.log(`⏱️  OTP expires in 10 minutes\n`);
+    }
     
     try {
       await emailService.sendPasswordResetEmail(email, otp);
@@ -306,8 +310,10 @@ exports.resendOTP = async (req, res) => {
     await user.save();
     
     // Log OTP for testing/debugging
-    console.log(`\n🔐 OTP for ${email}: ${otp}`);
-    console.log(`⏱️  OTP expires in 10 minutes\n`);
+    if (isDev) {
+      console.log(`\n🔐 OTP for ${email}: ${otp}`);
+      console.log(`⏱️  OTP expires in 10 minutes\n`);
+    }
     
     // Send OTP via email
     try {
