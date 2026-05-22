@@ -26,7 +26,7 @@ const ForgotPasswordPage = () => {
       setLoading(true);
       await authService.forgotPassword(email);
       setSubmitted(true);
-      toast.success("Reset link sent to your email!");
+      toast.success("Reset link and OTP sent to your email!");
     } catch (error) {
       toast.error(
         error.response?.data?.message || "Failed to send reset email",
@@ -48,10 +48,10 @@ const ForgotPasswordPage = () => {
               Check Your Email
             </h2>
             <p className="text-gray-600 mb-6">
-              We've sent a password reset link to <strong>{email}</strong>
+              We've sent a password reset link and a 6-digit reset code to <strong>{email}</strong>.
             </p>
             <p className="text-sm text-gray-500 mb-6">
-              Didn't receive the email? Check your spam folder or{" "}
+              If you don't see it, check your spam folder or{" "}
               <button
                 onClick={() => setSubmitted(false)}
                 className="text-primary-600 hover:text-primary-700 font-medium"

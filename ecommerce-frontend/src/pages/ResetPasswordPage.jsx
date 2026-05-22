@@ -12,6 +12,7 @@ const ResetPasswordPage = () => {
     password: "",
     confirmPassword: "",
   });
+  const [tokenInput, setTokenInput] = useState(token || "");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -27,6 +28,11 @@ const ResetPasswordPage = () => {
   const validateForm = () => {
     if (!formData.password || !formData.confirmPassword) {
       toast.error("Please fill in all fields");
+      return false;
+    }
+
+    if (!token && !tokenInput) {
+      toast.error("Please enter the reset code or use the reset link");
       return false;
     }
 
@@ -48,9 +54,15 @@ const ResetPasswordPage = () => {
 
     if (!validateForm()) return;
 
+    const resetToken = token || tokenInput.trim();
+    if (!resetToken) {
+      toast.error("Please enter the reset code or use the reset link");
+      return;
+    }
+
     try {
       setLoading(true);
-      await authService.resetPassword(token, formData.password);
+      await authService.resetPassword(resetToken, formData.password);
       setResetComplete(true);
       toast.success("Password reset successful!");
 
@@ -126,12 +138,48 @@ const ResetPasswordPage = () => {
           <h2 className="text-4xl font-extrabold text-gray-900 mb-2">
             Set New Password
           </h2>
-          <p className="text-gray-600">Enter your new password below.</p>
+          <p className="text-gray-600">
+            {token
+              ? "Your reset link is ready. Enter your new password below."
+              : "Enter the 6-digit reset code from your email and choose a new password."}
+          </p>
+          {!token && (
+            <p className="text-sm text-gray-500">
+              If you received a reset link, open it instead of entering the
+              code.
+            </p>
+          )}
         </div>
 
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {!token && (
+              <div>
+                <label
+                  htmlFor="resetCode"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Reset Code
+                </label>
+                <input
+                  id="resetCode"
+                  name="resetCode"
+                  type="text"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  className="input-field"
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  required={!token}
+                  disabled={loading}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Your email includes a 6-digit code and a reset link.
+                </p>
+              </div>
+            )}
+
             {/* New Password */}
             <div>
               <label
