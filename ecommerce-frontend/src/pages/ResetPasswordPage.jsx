@@ -139,11 +139,7 @@ const ResetPasswordPage = () => {
             Set New Password
           </h2>
           <p className="text-gray-600">
-            Enter the 6-digit reset code from your email, or open the reset link
-            and use the prefilled code.
-          </p>
-          <p className="text-sm text-gray-500">
-            If you clicked the link, the code will already be filled in for you.
+            Enter the 6-digit reset code from your email to set your new password.
           </p>
         </div>
 
@@ -169,9 +165,6 @@ const ResetPasswordPage = () => {
                 required
                 disabled={loading}
               />
-              <p className="text-xs text-gray-500 mt-2">
-                Your email includes a 6-digit code and a reset link.
-              </p>
             </div>
 
             {/* New Password */}

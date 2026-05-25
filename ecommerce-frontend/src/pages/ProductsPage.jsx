@@ -16,6 +16,9 @@ const ProductsPage = () => {
     if (normalized === "electronics") return "Electronics";
     if (normalized === "clothing") return "Clothing";
     if (normalized === "books") return "Books";
+    if (normalized === "home & garden" || normalized === "home&garden") return "Home & Garden";
+    if (normalized === "sports") return "Sports";
+    if (normalized === "toys") return "Toys";
     return "all";
   };
   const [selectedCategory, setSelectedCategory] = useState(
@@ -173,6 +176,7 @@ const ProductsPage = () => {
           md:w-64 md:block
           ${showFilters ? "block" : "hidden"}
           fixed md:relative inset-0 z-50 md:z-auto bg-white md:bg-transparent p-4 md:p-0
+          md:sticky md:top-24 md:h-fit
         `}
         >
           <div className="bg-white rounded-xl shadow-sm p-6">

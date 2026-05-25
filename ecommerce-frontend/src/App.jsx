@@ -209,6 +209,30 @@ const Footer = () => {
                   Books
                 </Link>
               </li>
+              <li>
+                <Link
+                  to="/products?category=Home%20%26%20Garden"
+                  className="hover:text-primary-600"
+                >
+                  Home & Garden
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/products?category=Sports"
+                  className="hover:text-primary-600"
+                >
+                  Sports
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/products?category=Toys"
+                  className="hover:text-primary-600"
+                >
+                  Toys
+                </Link>
+              </li>
             </ul>
           </div>
           <div>

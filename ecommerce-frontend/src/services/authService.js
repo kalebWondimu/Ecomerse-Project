@@ -39,13 +39,23 @@ const authService = {
   },
 
   forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', { email });
-    return response.data;
+    try {
+      const response = await api.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      console.error('Forgot password error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   resetPassword: async (token, password) => {
-    const response = await api.post(`/auth/reset-password/${token}`, { password });
-    return response.data;
+    try {
+      const response = await api.post(`/auth/reset-password/${token}`, { password });
+      return response.data;
+    } catch (error) {
+      console.error('Reset password error:', error.response?.data || error.message);
+      throw error;
+    }
   },
 
   verifyEmail: async (token) => {

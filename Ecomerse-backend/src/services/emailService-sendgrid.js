@@ -69,15 +69,20 @@ const emailService = {
           body { font-family: Arial, sans-serif; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .button { display: inline-block; padding: 12px 30px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-          .code { font-size: 28px; font-weight: bold; color: #007bff; letter-spacing: 5px; margin: 20px 0; }
+          .code { font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 8px; margin: 20px 0; padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px dashed #007bff; text-align: center; font-family: monospace; }
+          .code-label { font-size: 12px; color: #666; text-align: center; margin-bottom: 8px; }
+          .divider { text-align: center; margin: 20px 0; color: #999; }
         </style>
       </head>
       <body>
         <div class="container">
           <h2>Password Reset Request</h2>
           <p>We received a request to reset your password.</p>
-          ${isOtp ? `<p>Use the code below or click the button to reset your password.</p>
-          <p class="code">${resetToken}</p>` : `<p>Click the button below to reset your password.</p>`}
+          ${isOtp ? `<p>Use the 6-digit code below to reset your password:</p>
+          <div class="code-label">6-Digit Reset Code</div>
+          <div class="code">${resetToken}</div>
+          <p style="text-align: center; font-size: 12px; color: #999;">This code is easy to copy and paste</p>
+          <div class="divider">Or click the button below</div>` : `<p>Click the button below to reset your password.</p>`}
           <p><a class="button" href="${resetUrl}">Reset Password</a></p>
           <p>This credential will expire in ${expiryText}.</p>
           <p>If you didn't request this, please ignore this email.</p>

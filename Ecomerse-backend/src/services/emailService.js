@@ -58,7 +58,9 @@ const emailService = {
           body { font-family: Arial, sans-serif; color: #333; }
           .container { max-width: 600px; margin: 0 auto; padding: 20px; }
           .button { display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 6px; }
-          .code { font-size: 28px; font-weight: bold; color: #2563eb; letter-spacing: 6px; margin: 20px 0; }
+          .code { font-size: 32px; font-weight: bold; color: #2563eb; letter-spacing: 8px; margin: 20px 0; padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px dashed #2563eb; text-align: center; font-family: monospace; }
+          .code-label { font-size: 12px; color: #666; text-align: center; margin-bottom: 8px; }
+          .divider { text-align: center; margin: 20px 0; color: #999; }
           .footer { font-size: 12px; color: #666; margin-top: 20px; }
         </style>
       </head>
@@ -66,8 +68,11 @@ const emailService = {
         <div class="container">
           <h2>Password Reset Request</h2>
           <p>We received a request to reset your password.</p>
-          ${isOtp ? `<p>Use the code below or click the button to reset your password.</p>
-          <p class="code">${resetToken}</p>` : `<p>Click the button below to reset your password.</p>`}
+          ${isOtp ? `<p>Use the 6-digit code below to reset your password:</p>
+          <div class="code-label">6-Digit Reset Code</div>
+          <div class="code">${resetToken}</div>
+          <p style="text-align: center; font-size: 12px; color: #999;">This code is easy to copy and paste</p>
+          <div class="divider">Or click the button below</div>` : `<p>Click the button below to reset your password.</p>`}
           <p><a class="button" href="${resetUrl}">Reset Password</a></p>
           <p>If the button does not work, copy and paste this link into your browser:</p>
           <p><a href="${resetUrl}">${resetUrl}</a></p>
