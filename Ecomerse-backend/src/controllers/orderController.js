@@ -9,21 +9,42 @@ exports.createOrder = async (req, res) => {
     }
     
     // prepare items array with price and product name
+    // Also validate stock availability before creating order
     const items = [];
     let totalAmount = 0;
+    const stockChecks = [];
+    
     for (const i of cart.items) {
       const prod = await Product.findByPk(i.productId);
-      if (prod) {
-        items.push({
-          productId: i.productId,
-          productName: prod.name,
-          quantity: i.quantity,
-          price: prod.price,
+      if (!prod) {
+        return res.status(404).json({ 
+          message: `Product with ID ${i.productId} not found` 
         });
-        totalAmount += i.quantity * prod.price;
       }
+      
+      // Check if enough stock is available
+      if (prod.stock < i.quantity) {
+        return res.status(400).json({ 
+          message: `Insufficient stock for ${prod.name}. Available: ${prod.stock}, Requested: ${i.quantity}` 
+        });
+      }
+      
+      items.push({
+        productId: i.productId,
+        productName: prod.name,
+        quantity: i.quantity,
+        price: prod.price,
+      });
+      totalAmount += i.quantity * prod.price;
+      
+      // Store product and quantity for stock decrement
+      stockChecks.push({
+        product: prod,
+        quantity: i.quantity
+      });
     }
     
+    // Create order first
     const order = await Order.create({
       userId: req.user.id,
       items,
@@ -31,6 +52,12 @@ exports.createOrder = async (req, res) => {
       paymentMethod: req.body.paymentMethod,
       shippingAddress: req.body.shippingAddress,
     });
+    
+    // Then decrement stock for each product (professional e-commerce practice)
+    for (const check of stockChecks) {
+      check.product.stock -= check.quantity;
+      await check.product.save();
+    }
     
     // clear cart after creating order
     cart.items = [];
@@ -174,10 +201,23 @@ exports.cancelOrder = async (req, res) => {
       return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
     }
     
+    // Restore stock for all items in the order
+    for (const item of order.items) {
+      const product = await Product.findByPk(item.productId);
+      if (product) {
+        product.stock += item.quantity;
+        await product.save();
+      }
+    }
+    
     order.status = 'cancelled';
     await order.save();
     
-    res.json(order);
+    res.json({ 
+      success: true, 
+      message: 'Order cancelled and stock restored', 
+      order 
+    });
   } catch (error) {
     console.error('Cancel order error:', error);
     res.status(500).json({ message: error.message });
