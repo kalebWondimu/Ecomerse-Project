@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { FiMail, FiArrowLeft, FiCheckCircle, FiCopy, FiCheck } from "react-icons/fi";
+import { FiMail, FiArrowLeft, FiCheckCircle } from "react-icons/fi";
 import authService from "../services/authService";
 import toast from "react-hot-toast";
 
@@ -8,7 +8,6 @@ const ForgotPasswordPage = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [copiedOTP, setCopiedOTP] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,12 +48,14 @@ const ForgotPasswordPage = () => {
               Check Your Email
             </h2>
             <p className="text-gray-600 mb-6">
-              We've sent a password reset link and a 6-digit reset code to <strong>{email}</strong>.
+              We've sent a password reset link and a 6-digit reset code to{" "}
+              <strong>{email}</strong>.
             </p>
             <p className="text-sm text-gray-500 mb-8">
-              You can either click the link in your email or use the 6-digit code below to reset your password.
+              You can either click the link in your email or use the 6-digit
+              code below to reset your password.
             </p>
-            
+
             {/* Divider */}
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
@@ -67,9 +68,19 @@ const ForgotPasswordPage = () => {
 
             {/* Next Steps */}
             <div className="bg-blue-50 rounded-lg p-4 mb-6 text-left">
-              <h3 className="font-semibold text-gray-900 mb-3 text-sm">To reset your password:</h3>
+              <h3 className="font-semibold text-gray-900 mb-3 text-sm">
+                To reset your password:
+              </h3>
               <ol className="text-sm text-gray-700 space-y-2 list-decimal list-inside">
-                <li>Go to <Link to="/reset-password" className="text-primary-600 font-medium hover:text-primary-700">reset password page</Link></li>
+                <li>
+                  Go to{" "}
+                  <Link
+                    to="/reset-password"
+                    className="text-primary-600 font-medium hover:text-primary-700"
+                  >
+                    reset password page
+                  </Link>
+                </li>
                 <li>Enter the 6-digit code from your email</li>
                 <li>Create a new password</li>
               </ol>

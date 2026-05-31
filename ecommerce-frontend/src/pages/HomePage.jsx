@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import productService from "../services/productService";
+import ProductCard from "../components/products/ProductCard";
+import toast from "react-hot-toast";
 
 const categories = [
   {
@@ -22,6 +25,25 @@ const categories = [
 const HomePage = () => {
   const location = useLocation();
   const welcomeMessage = location.state?.welcomeMessage;
+  const [featured, setFeatured] = useState([]);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+
+  useEffect(() => {
+    const loadFeatured = async () => {
+      try {
+        setLoadingFeatured(true);
+        const data = await productService.getProducts({ limit: 6 });
+        setFeatured(data || []);
+      } catch (err) {
+        console.error('Failed to load featured products', err);
+        toast.error('Failed to load featured products');
+      } finally {
+        setLoadingFeatured(false);
+      }
+    };
+
+    loadFeatured();
+  }, []);
 
   return (
     <div>
@@ -74,6 +96,21 @@ const HomePage = () => {
           </div>
         </div>
       </section>
+      {/* Promotional Banner */}
+      <section className="py-6">
+        <div className="container-custom">
+          <div className="rounded-2xl bg-gradient-to-r from-yellow-50 to-white border p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-bold">Limited time: Summer Sale — up to 40% off</h3>
+              <p className="text-gray-600 mt-2">Selected electronics, clothing and home essentials. While stocks last.</p>
+            </div>
+            <div className="flex gap-3">
+              <Link to="/products?category=Electronics" className="btn-primary">Shop Electronics</Link>
+              <Link to="/products" className="btn-secondary">See All Deals</Link>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Featured Categories */}
       <section className="py-16">
@@ -117,6 +154,41 @@ const HomePage = () => {
               </Link>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Featured Products */}
+      <section className="py-16">
+        <div className="container-custom">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold">Featured Products</h2>
+              <p className="text-gray-600 mt-1">Hand-picked popular items</p>
+            </div>
+            <Link to="/products" className="text-primary-600 font-semibold hover:text-primary-700">View all products →</Link>
+          </div>
+
+          {loadingFeatured ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1,2,3,4,5,6].map((n) => (
+                <div key={n} className="bg-white rounded-xl shadow-sm p-4 animate-pulse">
+                  <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : featured.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featured.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No featured products available right now.</p>
+            </div>
+          )}
         </div>
       </section>
     </div>
