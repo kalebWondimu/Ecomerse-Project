@@ -32,8 +32,8 @@ exports.initiateChapPayment = async (req, res) => {
       phone_number: '',
       tx_ref: txRef,
       callback_url: `${backendUrl}/api/payments/chapa/callback`,
-      // Return to a public payment-result page which will verify the tx_ref
-      return_url: `${frontendUrl}/payment-result?tx_ref=${txRef}&orderId=${orderId}`,
+      // Use hash routing for the frontend app so the direct Chapa return URL resolves correctly.
+      return_url: `${frontendUrl}/#/payment-result?tx_ref=${txRef}&orderId=${orderId}`,
       customization: {
         // Title must be <= 16 chars per Chapa API; description must not contain '#'
         title: 'Ecom Payment',
