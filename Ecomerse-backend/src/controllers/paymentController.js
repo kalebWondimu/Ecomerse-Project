@@ -34,8 +34,9 @@ exports.initiateChapPayment = async (req, res) => {
       callback_url: `${backendUrl}/api/payments/chapa/callback`,
       return_url: `${frontendUrl}/order-confirmation/${orderId}`,
       customization: {
-        title: 'E-commerce Order Payment',
-        description: `Order #ORD-${orderId}`,
+        // Title must be <= 16 chars per Chapa API; description must not contain '#'
+        title: 'Ecom Payment',
+        description: `Order ORD-${orderId}`,
       },
     };
 
