@@ -1,19 +1,25 @@
 import React, { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import paymentService from "../services/paymentService";
 import { useAuth } from "../context/AuthContext";
 
 const PaymentResultPage = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [orderId, setOrderId] = useState(null);
+  const [redirectCountdown, setRedirectCountdown] = useState(3);
 
   useEffect(() => {
-    const query = new URLSearchParams(location.search);
+    const query = new URLSearchParams(
+      location.search || location.hash.split("?")[1] || "",
+    );
     const txRef = query.get("tx_ref");
-    const orderId = query.get("orderId");
+    const foundOrderId = query.get("orderId");
+    setOrderId(foundOrderId);
 
     if (!txRef) {
       setError("No transaction reference provided.");
@@ -21,10 +27,28 @@ const PaymentResultPage = () => {
       return;
     }
 
+    let intervalId;
+
     const verifyPayment = async () => {
       try {
         const data = await paymentService.verifyPaymentPublic(txRef);
-        setResult({ ...data, orderId });
+        setResult({ ...data, orderId: foundOrderId });
+
+        const isSuccess =
+          data.chapaStatus === "success" &&
+          data.chapaData?.status === "success";
+        if (isSuccess && isAuthenticated && foundOrderId) {
+          let count = 3;
+          setRedirectCountdown(count);
+          intervalId = window.setInterval(() => {
+            count -= 1;
+            setRedirectCountdown(count);
+            if (count <= 0) {
+              window.clearInterval(intervalId);
+              navigate(`/order-confirmation/${foundOrderId}`);
+            }
+          }, 1000);
+        }
       } catch (err) {
         setError(
           err.response?.data?.message ||
@@ -37,7 +61,12 @@ const PaymentResultPage = () => {
     };
 
     verifyPayment();
-  }, [location.search]);
+    return () => {
+      if (intervalId) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, [location.search, location.hash, isAuthenticated, navigate]);
 
   const renderStatus = () => {
     if (!result) return null;
@@ -70,6 +99,22 @@ const PaymentResultPage = () => {
             <span className="font-semibold">{result.chapaData.status}</span>
           </p>
         )}
+        {result.chapaStatus === "success" &&
+          result.chapaData?.status === "success" && (
+            <p className="text-gray-600 mb-4">
+              Payment confirmed successfully. You will be redirected to your
+              order page in {redirectCountdown} second
+              {redirectCountdown === 1 ? "" : "s"}.
+            </p>
+          )}
+        {result.chapaStatus === "success" &&
+          result.chapaData?.status === "success" &&
+          !isAuthenticated && (
+            <p className="text-gray-600 mb-4">
+              Payment confirmed successfully. Please log in to view your full
+              order details on the site.
+            </p>
+          )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {orderId && isAuthenticated && (
             <Link
