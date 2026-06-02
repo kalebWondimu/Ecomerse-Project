@@ -39,6 +39,13 @@ exports.initiateChapPayment = async (req, res) => {
       },
     };
 
+    // Some payment providers require integer amounts. Coerce to integer for testing.
+    const originalAmount = payload.amount;
+    if (!Number.isInteger(payload.amount)) {
+      payload.amount = Math.round(Number(payload.amount));
+      console.info(`Coerced Chapa amount from ${originalAmount} to ${payload.amount} for initialization`);
+    }
+
     const chapaResponse = await axios.post(chapaEndpoint, payload, {
       headers: {
         Authorization: `Bearer ${chapaApiKey}`,
@@ -50,7 +57,12 @@ exports.initiateChapPayment = async (req, res) => {
     if (!chapaData || chapaData.status !== 'success' || !chapaData.data) {
       console.error('Chapa initialization failed:', JSON.stringify(chapaData, null, 2));
       console.error('Request payload was:', JSON.stringify(payload, null, 2));
-      return res.status(502).json({ message: 'Failed to initialize Chapa payment', error: chapaData?.message });
+      return res.status(502).json({
+        message: 'Failed to initialize Chapa payment',
+        chapaStatus: chapaData?.status,
+        chapaError: chapaData?.message || null,
+        chapaData: chapaData?.data || null,
+      });
     }
 
     const order = await Order.findByPk(orderId);
@@ -69,7 +81,18 @@ exports.initiateChapPayment = async (req, res) => {
       message: 'Redirect user to Chapa checkout URL',
     });
   } catch (error) {
-    console.error('Chapa payment error:', error);
+    // Better error reporting for Axios errors coming from Chapa
+    console.error('Chapa payment error:', error.message);
+    if (error.response) {
+      console.error('Chapa response status:', error.response.status);
+      console.error('Chapa response data:', JSON.stringify(error.response.data, null, 2));
+      return res.status(error.response.status).json({
+        message: 'Chapa API error',
+        status: error.response.status,
+        data: error.response.data,
+      });
+    }
+
     res.status(500).json({ message: error.message });
   }
 };
