@@ -32,7 +32,8 @@ exports.initiateChapPayment = async (req, res) => {
       phone_number: '',
       tx_ref: txRef,
       callback_url: `${backendUrl}/api/payments/chapa/callback`,
-      return_url: `${frontendUrl}/order-confirmation/${orderId}`,
+      // Return to a public payment-result page which will verify the tx_ref
+      return_url: `${frontendUrl}/payment-result?tx_ref=${txRef}&orderId=${orderId}`,
       customization: {
         // Title must be <= 16 chars per Chapa API; description must not contain '#'
         title: 'Ecom Payment',
@@ -159,6 +160,38 @@ exports.verifyPayment = async (req, res) => {
     });
   } catch (error) {
     console.error('Payment verification error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Public verification endpoint for use by frontend return page (no auth required)
+exports.verifyPaymentPublic = async (req, res) => {
+  try {
+    const { transactionId } = req.params;
+    if (!transactionId) return res.status(400).json({ message: 'transactionId required' });
+
+    const chapaApiKey = process.env.CHAPA_API_KEY;
+    const verifyUrl = `https://api.chapa.co/v1/transaction/verify/${transactionId}`;
+
+    if (!chapaApiKey) return res.status(500).json({ message: 'Chapa API key not configured' });
+
+    const verifyResponse = await axios.get(verifyUrl, {
+      headers: { Authorization: `Bearer ${chapaApiKey}` },
+    });
+
+    const verifyData = verifyResponse.data;
+
+    // Return sanitized verification result
+    return res.json({
+      transactionId,
+      chapaStatus: verifyData?.status || 'failed',
+      chapaData: verifyData?.data || null,
+    });
+  } catch (error) {
+    console.error('Public payment verification error:', error?.message || error);
+    if (error.response) {
+      return res.status(error.response.status).json({ message: 'Chapa verify error', data: error.response.data });
+    }
     res.status(500).json({ message: error.message });
   }
 };
