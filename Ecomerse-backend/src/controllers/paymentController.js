@@ -19,8 +19,8 @@ exports.initiateChapPayment = async (req, res) => {
       return res.status(500).json({ message: 'Chapa API key is not configured' });
     }
 
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const backendUrl = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 
     const txRef = `ORD-${String(orderId).padStart(6, '0')}-${Date.now()}`;
     const payload = {
