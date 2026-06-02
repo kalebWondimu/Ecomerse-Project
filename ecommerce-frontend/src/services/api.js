@@ -31,10 +31,13 @@ api.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
+          // Prevent login endpoint failures from redirecting away from the login page.
+          if (!error.config?.url?.includes('/auth/login')) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            if (window.location.hash !== '#/login') {
+              window.location.hash = '#/login';
+            }
             toast.error('Session expired. Please login again.');
           }
           break;
