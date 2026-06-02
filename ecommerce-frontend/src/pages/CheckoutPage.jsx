@@ -40,14 +40,8 @@ const CheckoutPage = () => {
     country: "Ethiopia",
   });
 
-  const [paymentInfo, setPaymentInfo] = useState({
-    cardNumber: "",
-    cardName: "",
-    expiry: "",
-    cvv: "",
-  });
-
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [paymentInfo, setPaymentInfo] = useState({});
+  const [paymentMethod, setPaymentMethod] = useState("chapa");
 
   const [errors, setErrors] = useState({});
 
@@ -107,27 +101,7 @@ const CheckoutPage = () => {
 
   const validatePayment = () => {
     const newErrors = {};
-
-    if (paymentMethod === "card") {
-      if (!paymentInfo.cardNumber)
-        newErrors.cardNumber = "Card number is required";
-      else if (paymentInfo.cardNumber.replace(/\s/g, "").length < 16) {
-        newErrors.cardNumber = "Card number must be 16 digits";
-      }
-      if (!paymentInfo.cardName)
-        newErrors.cardName = "Name on card is required";
-      if (!paymentInfo.expiry) newErrors.expiry = "Expiry date is required";
-      else if (!/^\d{2}\/\d{2}$/.test(paymentInfo.expiry)) {
-        newErrors.expiry = "Expiry must be MM/YY";
-      }
-      if (!paymentInfo.cvv) newErrors.cvv = "CVV is required";
-      else if (paymentInfo.cvv.length < 3)
-        newErrors.cvv = "CVV must be 3 digits";
-    } else if (paymentMethod === "telebirr" || paymentMethod === "chapa") {
-      if (!shippingInfo.phone) newErrors.phone = "Phone number is required";
-    }
-    // CBE might require account number or other details, but for now we'll keep it simple
-
+    // Chapa only - no additional validation needed beyond shipping info
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -176,49 +150,17 @@ const CheckoutPage = () => {
       const newOrderId = response.id;
       const paymentAmount = parseFloat(total.toFixed(2));
 
-      if (paymentMethod === "telebirr") {
-        const paymentResponse = await paymentService.initiateTelebirr({
-          orderId: newOrderId,
-          amount: paymentAmount,
-          phoneNumber: shippingInfo.phone,
-        });
-        setOrderPlaced(true);
-        await clearCart();
-        toast.success(paymentResponse.message || "Telebirr payment started");
-        if (paymentResponse.paymentUrl) {
-          window.open(paymentResponse.paymentUrl, "_blank");
-          navigate(`/order-confirmation/${newOrderId}`);
-          return;
-        }
-      } else if (paymentMethod === "chapa") {
-        const paymentResponse = await paymentService.initiateChapa({
-          orderId: newOrderId,
-          amount: paymentAmount,
-          email: shippingInfo.email,
-        });
-        setOrderPlaced(true);
-        await clearCart();
-        toast.success(paymentResponse.message || "Chapa checkout initiated");
-        if (paymentResponse.checkoutUrl) {
-          window.open(paymentResponse.checkoutUrl, "_blank");
-          navigate(`/order-confirmation/${newOrderId}`);
-          return;
-        }
-      } else if (paymentMethod === "cbe") {
-        const paymentResponse = await paymentService.initiateCBE({
-          orderId: newOrderId,
-          amount: paymentAmount,
-          accountNumber: shippingInfo.phone,
-        });
-        setOrderPlaced(true);
-        await clearCart();
-        toast.success(paymentResponse.message || "CBE bank transfer initiated");
-        navigate(`/order-confirmation/${newOrderId}`);
-        return;
-      } else {
-        setOrderPlaced(true);
-        await clearCart();
-        toast.success("Order placed successfully!");
+      // Chapa payment
+      const paymentResponse = await paymentService.initiateChapa({
+        orderId: newOrderId,
+        amount: paymentAmount,
+        email: shippingInfo.email,
+      });
+      setOrderPlaced(true);
+      await clearCart();
+      toast.success(paymentResponse.message || "Redirecting to Chapa checkout...");
+      if (paymentResponse.checkoutUrl) {
+        window.open(paymentResponse.checkoutUrl, "_blank");
         navigate(`/order-confirmation/${newOrderId}`);
         return;
       }
@@ -550,134 +492,17 @@ const CheckoutPage = () => {
               <>
                 <h2 className="text-2xl font-bold mb-6">Payment Method</h2>
                 <form onSubmit={handlePaymentSubmit} className="space-y-4">
-                  {/* Payment Method Selection */}
-                  <div className="mb-6">
-                    <h3 className="text-lg font-medium mb-4">
-                      Select Payment Method
+                  <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                    <h3 className="text-lg font-medium mb-2 flex items-center">
+                      <FiCreditCard className="mr-2" /> Payment via Chapa
                     </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <label className="relative">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="card"
-                          checked={paymentMethod === "card"}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="sr-only"
-                        />
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                            paymentMethod === "card"
-                              ? "border-primary-600 bg-primary-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <FiCreditCard className="h-6 w-6 mr-3 text-primary-600" />
-                            <div>
-                              <p className="font-medium">Credit/Debit Card</p>
-                              <p className="text-sm text-gray-500">
-                                Visa, Mastercard
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                      <label className="relative">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="telebirr"
-                          checked={paymentMethod === "telebirr"}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="sr-only"
-                        />
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                            paymentMethod === "telebirr"
-                              ? "border-primary-600 bg-primary-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <div className="h-6 w-6 mr-3 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-xs">
-                              T
-                            </div>
-                            <div>
-                              <p className="font-medium">Telebirr</p>
-                              <p className="text-sm text-gray-500">
-                                Mobile Money
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                      <label className="relative">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="chapa"
-                          checked={paymentMethod === "chapa"}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="sr-only"
-                        />
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                            paymentMethod === "chapa"
-                              ? "border-primary-600 bg-primary-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <div className="h-6 w-6 mr-3 bg-blue-500 rounded flex items-center justify-center text-white font-bold text-xs">
-                              C
-                            </div>
-                            <div>
-                              <p className="font-medium">Chapa</p>
-                              <p className="text-sm text-gray-500">
-                                Digital Payment
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-
-                      <label className="relative">
-                        <input
-                          type="radio"
-                          name="paymentMethod"
-                          value="cbe"
-                          checked={paymentMethod === "cbe"}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="sr-only"
-                        />
-                        <div
-                          className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
-                            paymentMethod === "cbe"
-                              ? "border-primary-600 bg-primary-50"
-                              : "border-gray-200 hover:border-gray-300"
-                          }`}
-                        >
-                          <div className="flex items-center">
-                            <div className="h-6 w-6 mr-3 bg-green-500 rounded flex items-center justify-center text-white font-bold text-xs">
-                              CBE
-                            </div>
-                            <div>
-                              <p className="font-medium">CBE Bank</p>
-                              <p className="text-sm text-gray-500">
-                                Bank Transfer
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </label>
-                    </div>
+                    <p className="text-sm text-gray-700">
+                      Secure payment using Chapa. You will be redirected to the Chapa checkout page.
+                    </p>
                   </div>
 
-                  {/* Payment Details Based on Method */}
-                  {paymentMethod === "card" && (
+                  {/* Keep Chapa details only when needed */}
+                  {false && (
                     <div className="bg-gray-50 p-4 rounded-lg mb-6">
                       <h3 className="font-medium mb-4 flex items-center">
                         <FiCreditCard className="mr-2" /> Card Details
@@ -792,61 +617,9 @@ const CheckoutPage = () => {
                     </div>
                   )}
 
-                  {(paymentMethod === "telebirr" ||
-                    paymentMethod === "chapa") && (
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                      <h3 className="font-medium mb-4 flex items-center">
-                        <FiPhone className="mr-2" /> Mobile Money Details
-                      </h3>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Phone Number
-                        </label>
-                        <input
-                          type="tel"
-                          value={shippingInfo.phone}
-                          onChange={(e) =>
-                            setShippingInfo({
-                              ...shippingInfo,
-                              phone: e.target.value,
-                            })
-                          }
-                          className={`input-field ${errors.phone ? "border-red-500" : ""}`}
-                          placeholder="+251 911 123 456"
-                        />
-                        {errors.phone && (
-                          <p className="mt-1 text-xs text-red-600">
-                            {errors.phone}
-                          </p>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          You'll receive a payment prompt on this number.
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
-                  {paymentMethod === "cbe" && (
-                    <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                      <h3 className="font-medium mb-4 flex items-center">
-                        <FiCreditCard className="mr-2" /> Bank Transfer Details
-                      </h3>
-                      <div className="text-sm text-gray-600">
-                        <p>
-                          You'll be redirected to CBE's secure payment page to
-                          complete your transaction.
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
-                  <div className="bg-blue-50 text-blue-700 text-sm p-4 rounded-lg flex items-start">
-                    <FiShield className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
-                    <p>
-                      This is a demo store. No real payments will be processed.
-                      Use test credentials for the selected payment method.
-                    </p>
-                  </div>
+
 
                   <div className="flex justify-between pt-4">
                     <button

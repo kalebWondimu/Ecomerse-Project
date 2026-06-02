@@ -1,76 +1,6 @@
 const axios = require('axios');
 const { Order } = require('../models');
 
-// Telebirr Payment Integration
-exports.initiateTelebirrPayment = async (req, res) => {
-  try {
-    const { orderId, amount, phoneNumber } = req.body;
-
-    if (!orderId || !amount || !phoneNumber) {
-      return res.status(400).json({ 
-        message: 'orderId, amount, and phoneNumber are required' 
-      });
-    }
-
-    // Telebirr API Configuration
-    const telebirrConfig = {
-      apiKey: process.env.TELEBIRR_API_KEY || 'demo-telebirr-key',
-      apiSecret: process.env.TELEBIRR_API_SECRET || 'demo-telebirr-secret',
-      merchantId: process.env.TELEBIRR_MERCHANT_ID || 'demo-merchant',
-      endpoint: 'https://api.telebirr.com/v1/payments',
-    };
-
-    // For demo mode, use mock gateway values if no real credentials are provided.
-    if (!process.env.TELEBIRR_API_KEY || !process.env.TELEBIRR_API_SECRET) {
-      console.warn('Telebirr credentials are not set; using demo payment flow.');
-    }
-
-    // Create payment request
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-    const payload = {
-      merchantId: telebirrConfig.merchantId,
-      orderId: `ORD-${String(orderId).padStart(6, '0')}`,
-      amount: Math.round(amount * 100), // Convert to cents
-      currency: 'ETB',
-      phoneNumber: phoneNumber,
-      callbackUrl: `${backendUrl}/api/payments/telebirr/callback`,
-      returnUrl: `${frontendUrl}/payment-success`,
-    };
-
-    // In production, make actual API call
-    // const response = await axios.post(telebirrConfig.endpoint, payload, {
-    //   headers: {
-    //     'Authorization': `Bearer ${telebirrConfig.apiKey}`,
-    //     'Content-Type': 'application/json',
-    //   }
-    // });
-
-    // For demo: return mock response
-    const mockTransactionId = `TBR-${Date.now()}`;
-    
-    const order = await Order.findByPk(orderId);
-    if (!order || order.userId !== req.user.id) {
-      return res.status(404).json({ message: 'Order not found for this user' });
-    }
-
-    order.paymentStatus = 'pending';
-    order.transactionId = mockTransactionId;
-    await order.save();
-
-    res.json({
-      success: true,
-      transactionId: mockTransactionId,
-      message: 'Payment initiated. USSD prompt will be sent to ' + phoneNumber,
-      paymentUrl: `https://telebirr.com/?transaction=${mockTransactionId}`, // Mock URL safe redirect to main site
-    });
-  } catch (error) {
-    console.error('Telebirr payment error:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
 // Chapa Payment Integration
 exports.initiateChapPayment = async (req, res) => {
   try {
@@ -82,58 +12,61 @@ exports.initiateChapPayment = async (req, res) => {
       });
     }
 
-    const chapaConfig = {
-      apiKey: process.env.CHAPA_API_KEY || 'demo-chapa-key',
-      endpoint: 'https://api.chapa.co/v1/transaction/initialize',
-    };
+    const chapaApiKey = process.env.CHAPA_API_KEY;
+    const chapaEndpoint = 'https://api.chapa.co/v1/transaction/initialize';
 
-    if (!process.env.CHAPA_API_KEY) {
-      console.warn('Chapa credentials are not set; using demo payment flow.');
+    if (!chapaApiKey) {
+      return res.status(500).json({ message: 'Chapa API key is not configured' });
     }
 
     const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+    const txRef = `ORD-${String(orderId).padStart(6, '0')}-${Date.now()}`;
     const payload = {
       amount: amount,
       currency: 'ETB',
       email: email,
       first_name: 'Customer',
-      phone_number: '0900000000',
-      tx_ref: `ORD-${String(orderId).padStart(6, '0')}-${Date.now()}`,
+      last_name: 'Customer',
+      phone_number: '',
+      tx_ref: txRef,
       callback_url: `${backendUrl}/api/payments/chapa/callback`,
-      return_url: `${frontendUrl}/payment-success`,
+      return_url: `${frontendUrl}/order-confirmation/${orderId}`,
       customization: {
         title: 'E-commerce Order Payment',
         description: `Order #ORD-${orderId}`,
       },
     };
 
-    // In production: make actual API call
-    // const response = await axios.post(chapaConfig.endpoint, payload, {
-    //   headers: {
-    //     'Authorization': `Bearer ${chapaConfig.apiKey}`,
-    //     'Content-Type': 'application/json',
-    //   }
-    // });
+    const chapaResponse = await axios.post(chapaEndpoint, payload, {
+      headers: {
+        Authorization: `Bearer ${chapaApiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
 
-    // For demo: return mock response
-    const mockCheckoutUrl = `https://checkout.chapa.co/?reference=${payload.tx_ref}`;
-    
+    const chapaData = chapaResponse.data;
+    if (!chapaData || chapaData.status !== 'success' || !chapaData.data) {
+      console.error('Chapa initialization failed:', JSON.stringify(chapaData, null, 2));
+      console.error('Request payload was:', JSON.stringify(payload, null, 2));
+      return res.status(502).json({ message: 'Failed to initialize Chapa payment', error: chapaData?.message });
+    }
+
     const order = await Order.findByPk(orderId);
     if (!order || order.userId !== req.user.id) {
       return res.status(404).json({ message: 'Order not found for this user' });
     }
 
     order.paymentStatus = 'pending';
-    order.transactionId = payload.tx_ref;
+    order.transactionId = txRef;
     await order.save();
 
     res.json({
       success: true,
-      transactionId: payload.tx_ref,
-      checkoutUrl: `https://checkout.chapa.co/?reference=${payload.tx_ref}`,
-      message: 'Redirect user to checkout URL',
+      transactionId: txRef,
+      checkoutUrl: chapaData.data.checkout_url,
+      message: 'Redirect user to Chapa checkout URL',
     });
   } catch (error) {
     console.error('Chapa payment error:', error);
@@ -141,107 +74,15 @@ exports.initiateChapPayment = async (req, res) => {
   }
 };
 
-// CBE Bank Payment Integration
-exports.initiateCBEPayment = async (req, res) => {
-  try {
-    const { orderId, amount, accountNumber } = req.body;
-
-    if (!orderId || !amount) {
-      return res.status(400).json({
-        message: 'orderId and amount are required',
-      });
-    }
-
-    const cbeConfig = {
-      apiKey: process.env.CBE_API_KEY || 'demo-cbe-key',
-      merchantCode: process.env.CBE_MERCHANT_CODE || 'demo-merchant-code',
-      endpoint: 'https://api.cbebirr.et/v1/payments',
-    };
-
-    if (!process.env.CBE_API_KEY || !process.env.CBE_MERCHANT_CODE) {
-      console.warn('CBE credentials are not set; using demo payment flow.');
-    }
-
-    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-    const payload = {
-      merchantCode: cbeConfig.merchantCode,
-      orderId: `ORD-${String(orderId).padStart(6, '0')}`,
-      amount: amount,
-      currency: 'ETB',
-      description: `E-commerce Order #ORD-${orderId}`,
-      callbackUrl: `${backendUrl}/api/payments/cbe/callback`,
-      returnUrl: `${frontendUrl}/payment-success`,
-    };
-
-    // In production: make actual API call
-    // const response = await axios.post(cbeConfig.endpoint, payload, {
-    //   headers: {
-    //     'Authorization': `Bearer ${cbeConfig.apiKey}`,
-    //     'Content-Type': 'application/json',
-    //   }
-    // });
-
-    // For demo: return mock response
-    const mockTransactionId = `CBE-${Date.now()}`;
-
-    const order = await Order.findByPk(orderId);
-    if (!order || order.userId !== req.user.id) {
-      return res.status(404).json({ message: 'Order not found for this user' });
-    }
-
-    order.paymentStatus = 'pending';
-    order.transactionId = mockTransactionId;
-    await order.save();
-
-    res.json({
-      success: true,
-      transactionId: mockTransactionId,
-      bankDetails: {
-        accountName: 'E-commerce Store',
-        accountNumber: '1000234567890',
-        bankCode: 'CBE',
-        referenceNumber: payload.orderId,
-        amount: amount,
-        description: 'Transfer to complete your order',
-      },
-      message: 'Bank transfer details generated. Please complete the transfer and use the reference number above.',
-    });
-  } catch (error) {
-    console.error('CBE payment error:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Payment Callback Handlers
-exports.telebirrCallback = async (req, res) => {
-  try {
-    const { transactionId, status, orderId } = req.body;
-
-    if (status === 'success') {
-      const order = await Order.findOne({ where: { transactionId } });
-      if (order) {
-        order.paymentStatus = 'completed';
-        order.status = 'processing';
-        await order.save();
-      }
-      return res.json({ success: true, message: 'Payment confirmed' });
-    }
-
-    res.json({ success: false, message: 'Payment failed' });
-  } catch (error) {
-    console.error('Telebirr callback error:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
+// Payment Callback Handler
 
 exports.chapaCallback = async (req, res) => {
   try {
-    const { tx_ref, status } = req.body;
+    const txRef = req.body.tx_ref || req.body.reference || req.query.tx_ref || req.query.reference;
+    const status = req.body.status || req.body.data?.status || req.query.status;
 
-    if (status === 'success') {
-      const order = await Order.findOne({ where: { transactionId: tx_ref } });
+    if (status === 'success' && txRef) {
+      const order = await Order.findOne({ where: { transactionId: txRef } });
       if (order) {
         order.paymentStatus = 'completed';
         order.status = 'processing';
@@ -250,30 +91,9 @@ exports.chapaCallback = async (req, res) => {
       return res.json({ success: true, message: 'Payment confirmed' });
     }
 
-    res.json({ success: false, message: 'Payment failed' });
+    res.json({ success: false, message: 'Payment failed or not confirmed' });
   } catch (error) {
     console.error('Chapa callback error:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-exports.cbeCallback = async (req, res) => {
-  try {
-    const { transactionId, status } = req.body;
-
-    if (status === 'success') {
-      const order = await Order.findOne({ where: { transactionId } });
-      if (order) {
-        order.paymentStatus = 'completed';
-        order.status = 'processing';
-        await order.save();
-      }
-      return res.json({ success: true, message: 'Payment confirmed' });
-    }
-
-    res.json({ success: false, message: 'Payment failed' });
-  } catch (error) {
-    console.error('CBE callback error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -286,6 +106,25 @@ exports.verifyPayment = async (req, res) => {
     const order = await Order.findOne({ where: { transactionId } });
     if (!order) {
       return res.status(404).json({ message: 'Transaction not found' });
+    }
+
+    // Verify with Chapa API
+    const chapaApiKey = process.env.CHAPA_API_KEY;
+    const verifyUrl = `https://api.chapa.co/v1/transaction/verify/${transactionId}`;
+
+    if (chapaApiKey) {
+      const verifyResponse = await axios.get(verifyUrl, {
+        headers: {
+          Authorization: `Bearer ${chapaApiKey}`,
+        },
+      });
+
+      const verifyData = verifyResponse.data;
+      if (verifyData?.status === 'success' && verifyData?.data?.status === 'success') {
+        order.paymentStatus = 'completed';
+        order.status = 'processing';
+        await order.save();
+      }
     }
 
     res.json({
