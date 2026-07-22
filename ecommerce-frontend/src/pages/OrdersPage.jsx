@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import orderService from "../services/orderService";
 import productService from "../services/productService";
+import OptimizedImage from "../components/common/OptimizedImage";
 import {
   FiPackage,
   FiTruck,
@@ -255,11 +256,8 @@ const OrdersPage = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="text-sm">
-                            <span className="text-gray-500">Order </span>
-                            <span className="font-mono font-medium text-primary-600">
-                              ORD-{String(order.id).padStart(6, "0")}
-                            </span>
+                          <div className="text-sm text-gray-500">
+                            {date.full}
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
@@ -298,22 +296,16 @@ const OrdersPage = () => {
                                 key={idx}
                                 className="flex items-center gap-4 py-2"
                               >
-                                <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-                                  {product?.images?.[0] ? (
-                                    <img
-                                      src={product.images[0]}
-                                      alt={product.name}
-                                      className="w-full h-full object-cover"
-                                      onError={(e) => {
-                                        e.target.onerror = null;
-                                        e.target.style.display = "none";
-                                        e.target.parentNode.innerHTML =
-                                          '<div class="w-full h-full flex items-center justify-center"><span class="text-2xl">📦</span></div>';
-                                      }}
-                                    />
-                                  ) : (
-                                    <span className="text-2xl">📦</span>
-                                  )}
+                                <div className="w-16 h-16 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
+                                  <OptimizedImage
+                                    src={product?.images?.[0]}
+                                    alt={
+                                      product?.name ||
+                                      `Product ${item.productId}`
+                                    }
+                                    className="h-full w-full"
+                                    fallbackClassName="h-full w-full"
+                                  />
                                 </div>
                                 <div className="flex-1">
                                   <h3 className="font-medium">

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import userService from "../services/userService";
 import toast from "react-hot-toast";
@@ -501,13 +502,9 @@ const UserProfilePage = () => {
                         className="border rounded-lg p-4 hover:shadow-md transition-shadow"
                       >
                         <div className="flex flex-wrap items-center justify-between mb-3">
-                          <div>
-                            <span className="text-sm text-gray-500">
-                              Order #
-                            </span>
-                            <span className="font-mono text-sm ml-1">
-                              ORD-{order.id}
-                            </span>
+                          <div className="text-sm text-gray-500">
+                            Placed on{" "}
+                            {new Date(order.createdAt).toLocaleDateString()}
                           </div>
                           <div className="flex items-center space-x-3">
                             {getStatusBadge(order.status)}
@@ -546,9 +543,12 @@ const UserProfilePage = () => {
                         </div>
 
                         <div className="mt-3 flex justify-end">
-                          <button className="text-primary-600 hover:text-primary-700 text-sm font-medium">
+                          <Link
+                            to={`/order-confirmation/${order.id}`}
+                            className="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                          >
                             View Details →
-                          </button>
+                          </Link>
                         </div>
                       </div>
                     ))}

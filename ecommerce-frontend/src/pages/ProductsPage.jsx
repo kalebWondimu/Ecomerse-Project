@@ -16,7 +16,8 @@ const ProductsPage = () => {
     if (normalized === "electronics") return "Electronics";
     if (normalized === "clothing") return "Clothing";
     if (normalized === "books") return "Books";
-    if (normalized === "home & garden" || normalized === "home&garden") return "Home & Garden";
+    if (normalized === "home & garden" || normalized === "home&garden")
+      return "Home & Garden";
     if (normalized === "sports") return "Sports";
     if (normalized === "toys") return "Toys";
     return "all";
@@ -28,6 +29,10 @@ const ProductsPage = () => {
   const [sortBy, setSortBy] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const pageSize = 9;
 
   useEffect(() => {
     fetchProducts();
@@ -41,23 +46,29 @@ const ProductsPage = () => {
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      fetchProducts();
+      fetchProducts(currentPage);
     }, 300);
 
     return () => clearTimeout(handler);
-  }, [selectedCategory, sortBy, searchTerm]);
+  }, [selectedCategory, sortBy, searchTerm, currentPage]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
       const params = {
         category: selectedCategory !== "all" ? selectedCategory : undefined,
         sort: sortBy,
         search: searchTerm || undefined,
-        limit: 100,
+        page,
+        limit: pageSize,
       };
       const data = await productService.getProducts(params);
-      setProducts(data);
+      setProducts(Array.isArray(data?.products) ? data.products : data || []);
+      setTotalCount(data?.totalCount || 0);
+      setTotalPages(
+        data?.totalPages || Math.ceil((data?.products?.length || 0) / pageSize),
+      );
+      setCurrentPage(data?.currentPage || page);
     } catch (error) {
       toast.error("Failed to load products");
     } finally {
@@ -79,7 +90,8 @@ const ProductsPage = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchProducts();
+    setCurrentPage(1);
+    fetchProducts(1);
   };
 
   const handlePriceFilter = () => {
@@ -111,7 +123,8 @@ const ProductsPage = () => {
     setPriceRange({ min: "", max: "" });
     setSortBy("newest");
     setSearchParams({});
-    fetchProducts();
+    setCurrentPage(1);
+    fetchProducts(1);
   };
 
   return (
@@ -275,14 +288,53 @@ const ProductsPage = () => {
             </div>
           ) : products.length > 0 ? (
             <>
-              <p className="text-gray-500 mb-4">
-                {products.length} products found
-              </p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-gray-500">
+                  Showing {products.length} of {totalCount} products
+                </p>
+                <p className="text-sm text-gray-500">
+                  Page {currentPage} of {totalPages}
+                </p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  {Array.from(
+                    { length: totalPages },
+                    (_, index) => index + 1,
+                  ).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`rounded-lg px-3 py-2 text-sm ${currentPage === page ? "bg-primary-600 text-white" : "border border-gray-300 text-gray-700"}`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() =>
+                      setCurrentPage((page) => Math.min(totalPages, page + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </>
           ) : (
             <div className="text-center py-16 bg-gray-50 rounded-2xl">

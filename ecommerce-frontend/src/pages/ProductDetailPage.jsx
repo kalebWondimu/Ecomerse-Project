@@ -15,6 +15,7 @@ import {
 import productService from "../services/productService";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import OptimizedImage from "../components/common/OptimizedImage";
 import toast from "react-hot-toast";
 
 const ProductDetailPage = () => {
@@ -186,15 +187,11 @@ const ProductDetailPage = () => {
           <div className="bg-white rounded-2xl shadow-sm p-4 mb-4">
             <div className="relative h-96 flex items-center justify-center">
               {productImage ? (
-                <img
+                <OptimizedImage
                   src={productImage}
                   alt={product.name}
-                  className="max-h-full max-w-full object-contain"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src =
-                      "https://via.placeholder.com/500?text=Product";
-                  }}
+                  className="h-full w-full"
+                  fallbackClassName="h-full w-full"
                 />
               ) : (
                 <div className="text-9xl">📦</div>
@@ -223,7 +220,12 @@ const ProductDetailPage = () => {
                       : "border-gray-200"
                   }`}
                 >
-                  <img src={img} alt="" className="w-full h-20 object-cover" />
+                  <OptimizedImage
+                    src={img}
+                    alt=""
+                    className="h-20 w-full"
+                    fallbackClassName="h-20 w-full"
+                  />
                 </button>
               ))}
             </div>

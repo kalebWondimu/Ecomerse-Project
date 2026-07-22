@@ -40,10 +40,6 @@ const ProductReviews = ({ productId }) => {
     fetchReviews();
   }, [productId]);
 
-  useEffect(() => {
-    reviews.forEach((review) => {});
-  }, [user, isAdmin, reviews]);
-
   const fetchReviews = async () => {
     try {
       setLoading(true);
@@ -238,7 +234,7 @@ const ProductReviews = ({ productId }) => {
     }
 
     try {
-      const response = await reviewService.editReply(
+      await reviewService.editReply(
         editingReply.reviewId,
         editingReply.reply.id,
         editReplyText,
@@ -505,17 +501,17 @@ const ProductReviews = ({ productId }) => {
 
                 {/* Review Actions */}
                 {canModifyReview(review) && (
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 shadow-sm">
                     <button
                       onClick={() => handleEdit(review)}
-                      className="p-1 text-gray-400 hover:text-primary-600 transition-colors"
+                      className="text-gray-500 hover:text-primary-600 transition-colors"
                       title="Edit"
                     >
                       <FiEdit2 className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(review.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      className="text-gray-500 hover:text-red-600 transition-colors"
                       title="Delete"
                     >
                       <FiTrash2 className="h-4 w-4" />
@@ -621,12 +617,14 @@ const ProductReviews = ({ productId }) => {
                         </div>
                       ) : (
                         // View mode
-                        <div className="flex justify-between items-start">
+                        <div className="flex justify-between items-start gap-3">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <FiMessageCircle className="h-4 w-4 text-primary-600" />
                               <span className="font-medium text-sm">
-                                {reply.userName}
+                                {reply.userName ||
+                                  reply.user?.name ||
+                                  "Anonymous"}
                               </span>
                               <span className="text-xs text-gray-500">•</span>
                               <span className="text-xs text-gray-500">
@@ -634,7 +632,9 @@ const ProductReviews = ({ productId }) => {
                               </span>
                               {reply.edited && (
                                 <span className="text-xs text-gray-400 italic">
-                                  (edited)
+                                  {reply.editedAt
+                                    ? `edited ${formatDate(reply.editedAt)}`
+                                    : "(edited)"}
                                 </span>
                               )}
                             </div>
@@ -645,12 +645,12 @@ const ProductReviews = ({ productId }) => {
 
                           {/* Reply Actions */}
                           {(user?.id === reply.userId || isAdmin) && (
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex shrink-0 gap-2 rounded-lg border border-gray-200 bg-white px-2 py-1 shadow-sm">
                               <button
                                 onClick={() =>
                                   handleEditReply(review.id, reply)
                                 }
-                                className="text-gray-400 hover:text-primary-600"
+                                className="text-gray-500 hover:text-primary-600"
                                 title="Edit reply"
                               >
                                 <FiEdit2 className="h-3 w-3" />
@@ -659,7 +659,7 @@ const ProductReviews = ({ productId }) => {
                                 onClick={() =>
                                   handleDeleteReply(review.id, reply.id)
                                 }
-                                className="text-gray-400 hover:text-red-600"
+                                className="text-gray-500 hover:text-red-600"
                                 title="Delete reply"
                               >
                                 <FiTrash2 className="h-3 w-3" />

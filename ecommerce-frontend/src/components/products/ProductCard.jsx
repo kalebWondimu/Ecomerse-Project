@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FiShoppingCart, FiStar } from "react-icons/fi";
 import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
+import OptimizedImage from "../common/OptimizedImage";
 import toast from "react-hot-toast";
 
 const ProductCard = ({ product }) => {
@@ -30,14 +31,11 @@ const ProductCard = ({ product }) => {
       <Link to={`/products/${product.id}`}>
         <div className="relative h-48 bg-gray-200 overflow-hidden">
           {productImage ? (
-            <img
+            <OptimizedImage
               src={productImage}
               alt={product.name}
-              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "https://via.placeholder.com/300?text=Product";
-              }}
+              className="h-full w-full group-hover:scale-110 transition-transform duration-300"
+              fallbackClassName="h-full w-full"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
