@@ -79,6 +79,12 @@ const getReviews = async (req, res) => {
       
       // Ensure replies is always an array
       reviewData.replies = reviewData.replies || [];
+      reviewData.replies = reviewData.replies.map((reply) => {
+        if (reply.userId === currentUserId && req.user?.name) {
+          return { ...reply, userName: req.user.name };
+        }
+        return reply;
+      });
       
       // Check if current user has marked this review as helpful
       if (currentUserId) {
@@ -237,7 +243,7 @@ const addReply = async (req, res) => {
     const newReply = {
       id: Date.now(),
       userId: req.user.id,
-      userName: user.name,
+      userName: user.name || req.user.name || 'Anonymous',
       text: req.body.text,
       date: new Date().toISOString(),
       edited: false
@@ -283,6 +289,7 @@ const editReply = async (req, res) => {
     // Update the reply
     replies[replyIndex].text = text;
     replies[replyIndex].edited = true;
+    replies[replyIndex].userName = req.user.name || replies[replyIndex].userName || 'Anonymous';
     replies[replyIndex].editedAt = new Date().toISOString();
 
     review.replies = replies;
