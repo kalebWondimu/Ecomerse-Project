@@ -113,6 +113,7 @@ exports.initiateChapPayment = async (req, res) => {
     }
 
     order.paymentStatus = 'pending';
+    order.status = 'pending';
     order.transactionId = txRef;
     await order.save();
 
@@ -123,7 +124,6 @@ exports.initiateChapPayment = async (req, res) => {
       message: 'Redirect user to Chapa checkout URL',
     });
   } catch (error) {
-    // Better error reporting for Axios errors coming from Chapa
     console.error('Chapa payment error:', error.message);
     if (error.response) {
       console.error('Chapa response status:', error.response.status);
@@ -139,6 +139,93 @@ exports.initiateChapPayment = async (req, res) => {
   }
 };
 
+exports.retryChapPayment = async (req, res) => {
+  try {
+    const { orderId } = req.body;
+    if (!orderId) {
+      return res.status(400).json({ message: 'orderId is required' });
+    }
+
+    const order = await Order.findByPk(orderId);
+    if (!order || order.userId !== req.user.id) {
+      return res.status(404).json({ message: 'Order not found for this user' });
+    }
+
+    if (order.paymentStatus === 'completed') {
+      return res.status(400).json({ message: 'This order has already been paid' });
+    }
+
+    const chapaApiKey = process.env.CHAPA_API_KEY;
+    const chapaEndpoint = 'https://api.chapa.co/v1/transaction/initialize';
+
+    if (!chapaApiKey) {
+      return res.status(500).json({ message: 'Chapa API key is not configured' });
+    }
+
+    const backendUrl = (process.env.BACKEND_URL || 'http://localhost:5000').replace(/\/$/, '');
+    const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
+    const txRef = `ORD-${String(orderId).padStart(6, '0')}-${Date.now()}`;
+    const chapaAmount = getEtbAmount(order.totalAmount);
+    const payload = {
+      amount: Number(chapaAmount.toFixed(2)),
+      currency: 'ETB',
+      email: req.user?.email || '',
+      first_name: req.user?.name || 'Customer',
+      last_name: 'Customer',
+      phone_number: '',
+      tx_ref: txRef,
+      callback_url: `${backendUrl}/api/payments/chapa/callback`,
+      return_url: `${frontendUrl}/#/payment-result?tx_ref=${txRef}&orderId=${orderId}`,
+      customization: {
+        title: 'Ecom Payment',
+        description: `Order ORD-${orderId}`,
+      },
+    };
+
+    const chapaResponse = await axios.post(chapaEndpoint, payload, {
+      headers: {
+        Authorization: `Bearer ${chapaApiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const chapaData = chapaResponse.data;
+    if (!chapaData || chapaData.status !== 'success' || !chapaData.data) {
+      console.error('Chapa retry initialization failed:', JSON.stringify(chapaData, null, 2));
+      return res.status(502).json({
+        message: 'Failed to reinitialize Chapa payment',
+        chapaStatus: chapaData?.status,
+        chapaError: chapaData?.message || null,
+      });
+    }
+
+    order.paymentStatus = 'pending';
+    order.status = 'pending';
+    order.transactionId = txRef;
+    await order.save();
+
+    res.json({
+      success: true,
+      transactionId: txRef,
+      checkoutUrl: chapaData.data.checkout_url,
+      message: 'Redirect user to Chapa checkout URL',
+    });
+  } catch (error) {
+    console.error('Chapa retry payment error:', error.message);
+    if (error.response) {
+      console.error('Chapa retry response status:', error.response.status);
+      console.error('Chapa retry response data:', JSON.stringify(error.response.data, null, 2));
+      return res.status(error.response.status).json({
+        message: 'Chapa API error',
+        status: error.response.status,
+        data: error.response.data,
+      });
+    }
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // Payment Callback Handler
 
 exports.chapaCallback = async (req, res) => {
@@ -146,22 +233,34 @@ exports.chapaCallback = async (req, res) => {
     const txRef = req.body.tx_ref || req.body.reference || req.query.tx_ref || req.query.reference;
     const status = req.body.status || req.body.data?.status || req.query.status;
 
-    if (status === 'success' && txRef) {
-      const order = await Order.findOne({ where: { transactionId: txRef } });
-      if (order) {
-        await finalizeSuccessfulPayment(order);
-      }
+    if (!txRef) {
+      return res.status(400).json({ success: false, message: 'Transaction reference required' });
+    }
+
+    const order = await Order.findOne({ where: { transactionId: txRef } });
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    const isSuccess = status === 'success';
+    const isFailed = status === 'failed' || status === 'cancelled' || status === 'abandoned';
+
+    if (isSuccess) {
+      await finalizeSuccessfulPayment(order);
       return res.json({ success: true, message: 'Payment confirmed' });
     }
 
-    if (txRef) {
-      const order = await Order.findOne({ where: { transactionId: txRef } });
-      if (order) {
-        await markFailedPayment(order);
-      }
+    if (isFailed) {
+      await markFailedPayment(order);
+      return res.json({ success: false, message: 'Payment failed' });
     }
 
-    res.json({ success: false, message: 'Payment failed or not confirmed' });
+    // Keep the order pending while the transaction is still in progress.
+    order.paymentStatus = 'pending';
+    order.status = 'pending';
+    await order.save();
+
+    res.json({ success: false, message: 'Payment still pending' });
   } catch (error) {
     console.error('Chapa callback error:', error);
     res.status(500).json({ message: error.message });
@@ -190,9 +289,16 @@ exports.verifyPayment = async (req, res) => {
       });
 
       const verifyData = verifyResponse.data;
-      if (verifyData?.status === 'success' && verifyData?.data?.status === 'success') {
+      const isChapaSuccess =
+        verifyData?.status === 'success' &&
+        verifyData?.data?.status === 'success';
+      const isChapaFailed =
+        verifyData?.status === 'failed' ||
+        verifyData?.data?.status === 'failed';
+
+      if (isChapaSuccess) {
         await finalizeSuccessfulPayment(order);
-      } else {
+      } else if (isChapaFailed) {
         await markFailedPayment(order);
       }
     }
@@ -227,7 +333,21 @@ exports.verifyPaymentPublic = async (req, res) => {
     const verifyData = verifyResponse.data;
     const order = await Order.findOne({ where: { transactionId } });
 
-    // Return sanitized verification result
+    const isChapaSuccess =
+      verifyData?.status === 'success' &&
+      verifyData?.data?.status === 'success';
+    const isChapaFailed =
+      verifyData?.status === 'failed' ||
+      verifyData?.data?.status === 'failed';
+
+    if (order) {
+      if (isChapaSuccess) {
+        await finalizeSuccessfulPayment(order);
+      } else if (isChapaFailed) {
+        await markFailedPayment(order);
+      }
+    }
+
     return res.json({
       transactionId,
       chapaStatus: verifyData?.status || 'failed',

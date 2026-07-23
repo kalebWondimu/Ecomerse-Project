@@ -126,9 +126,9 @@ const OrdersPage = () => {
   const getStatusDisplay = (status) => {
     const statusMap = {
       pending: {
-        text: "Processing",
-        description: "Your order is being prepared",
-        color: "bg-orange-100 text-orange-700",
+        text: "Awaiting Payment",
+        description: "Your order is waiting for payment confirmation.",
+        color: "bg-yellow-100 text-yellow-800",
         canCancel: true,
       },
       processing: {
@@ -290,6 +290,16 @@ const OrdersPage = () => {
                                 </>
                               )}
                             </button>
+                          )}
+                          {(order.status === "pending" ||
+                            order.status === "failed") && (
+                            <Link
+                              to={`/order-confirmation/${order.id}`}
+                              className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                            >
+                              <FiCreditCard className="h-4 w-4" />
+                              <span>Continue Payment</span>
+                            </Link>
                           )}
                         </div>
                       </div>

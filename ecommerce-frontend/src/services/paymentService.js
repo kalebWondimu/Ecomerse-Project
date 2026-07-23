@@ -21,6 +21,16 @@ const paymentService = {
     }
   },
 
+  retryChapa: async (data) => {
+    try {
+      const response = await api.post('/payments/chapa/retry', data);
+      return response.data;
+    } catch (error) {
+      console.error('Chapa retry error:', error);
+      throw error;
+    }
+  },
+
   verifyPaymentPublic: async (transactionId) => {
     try {
       const response = await api.get(`/payments/verify-public/${transactionId}`);

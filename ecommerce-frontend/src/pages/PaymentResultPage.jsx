@@ -47,8 +47,38 @@ const PaymentResultPage = () => {
   }, [location.search, location.hash, isAuthenticated, navigate]);
 
   useEffect(() => {
-    document.title = `${storeSettings.storeName || "Store"} | Payment Status`;
+    document.title = storeSettings.storeName || "Store";
   }, [storeSettings.storeName]);
+
+  const handleDownloadReceipt = () => {
+    if (!result) return;
+
+    const amount = result?.amount ?? result?.chapaData?.amount;
+    const currency = result?.currency || result?.chapaData?.currency || "ETB";
+
+    const lines = [
+      `Order ID: ORD-${result.orderId || "N/A"}`,
+      `Transaction ID: ${result.transactionId}`,
+      `Payment Status: ${result.paymentStatus || result.chapaStatus}`,
+      `Order Status: ${result.orderStatus || "N/A"}`,
+      `Amount: ${Number(amount || 0).toFixed(2)} ${currency}`,
+      `Payment provider status: ${result.chapaData?.status || "N/A"}`,
+      `Date: ${new Date().toLocaleString()}`,
+      "\nThank you for shopping with us.",
+    ];
+
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `receipt-ORD-${result.orderId || "unknown"}.txt`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
 
   const renderStatus = () => {
     if (!result) return null;
@@ -56,6 +86,11 @@ const PaymentResultPage = () => {
     const isSuccess =
       result.chapaStatus === "success" &&
       result.chapaData?.status === "success";
+    const isPending =
+      result.chapaStatus === "pending" ||
+      result.chapaData?.status === "pending" ||
+      result.paymentStatus === "pending" ||
+      result.orderStatus === "pending";
 
     const amount = result?.amount ?? result?.chapaData?.amount;
     const currency = result?.currency || result?.chapaData?.currency || "ETB";
@@ -63,7 +98,11 @@ const PaymentResultPage = () => {
     return (
       <div className="rounded-lg bg-white p-8 shadow-md">
         <h1 className="text-3xl font-bold mb-4">
-          {isSuccess ? "Payment Successful" : "Payment Not Confirmed"}
+          {isSuccess
+            ? "Payment Successful"
+            : isPending
+              ? "Payment Pending"
+              : "Payment Not Confirmed"}
         </h1>
         <p className="text-gray-700 mb-4">
           Transaction reference:{" "}
@@ -93,17 +132,36 @@ const PaymentResultPage = () => {
               We have received your payment and your order is now being
               prepared.
             </p>
+            <p className="mt-2 text-sm text-gray-600">
+              You can download your receipt below for your records.
+            </p>
+          </div>
+        ) : isPending ? (
+          <div className="rounded-md border border-yellow-200 bg-yellow-50 p-4 text-yellow-700 mb-6">
+            <p className="font-semibold">Your payment is still pending.</p>
+            <p className="mt-1">
+              The transaction is in progress. Please do not close this page
+              while we confirm your payment.
+            </p>
           </div>
         ) : (
           <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-700 mb-6">
             <p className="font-semibold">Payment could not be confirmed.</p>
-            <p className="mt-1">
-              No completed order was created for this transaction. Please try
-              again or contact support if you believe this is an error.
+            <p className="mt-1">The payment did not complete successfully.</p>
+            <p className="mt-2 text-sm text-gray-600">
+              You can retry payment from your order details page.
             </p>
           </div>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          {(isSuccess || result.paymentStatus === "failed") && (
+            <button
+              onClick={handleDownloadReceipt}
+              className="inline-flex items-center justify-center rounded bg-secondary px-6 py-3 text-white hover:bg-gray-700"
+            >
+              Download Receipt
+            </button>
+          )}
           {orderId && isAuthenticated && (
             <Link
               to={`/order-confirmation/${orderId}`}

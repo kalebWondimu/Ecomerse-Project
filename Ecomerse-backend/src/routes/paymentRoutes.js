@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const {
   initiateChapPayment,
+  retryChapPayment,
   chapaCallback,
   verifyPayment,
   verifyPaymentPublic,
@@ -10,6 +11,7 @@ const {
 
 // Payment initiation endpoint (requires authentication)
 router.post('/chapa/initiate', protect, initiateChapPayment);
+router.post('/chapa/retry', protect, retryChapPayment);
 
 // Payment callback endpoint (no auth required - called by Chapa)
 router.post('/chapa/callback', chapaCallback);

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import orderService from "../services/orderService";
+import paymentService from "../services/paymentService";
 import productService from "../services/productService";
 import {
   FiCheckCircle,
@@ -15,6 +16,7 @@ import {
   FiCreditCard,
   FiAlertCircle,
   FiEye,
+  FiDownload,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 
@@ -28,6 +30,7 @@ const OrderConfirmationPage = () => {
   const [products, setProducts] = useState({});
   const [isCancelling, setIsCancelling] = useState(false);
   const [hidingOrder, setHidingOrder] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -138,6 +141,58 @@ const OrderConfirmationPage = () => {
     }
   };
 
+  const handleRetryPayment = async () => {
+    try {
+      setIsRetrying(true);
+      const response = await paymentService.retryChapa({ orderId: order.id });
+      toast.success(
+        response.message || "Continue payment in the checkout window.",
+      );
+      if (response.checkoutUrl) {
+        window.location.href = response.checkoutUrl;
+        return;
+      }
+      navigate(
+        `/payment-result?tx_ref=${response.transactionId}&orderId=${order.id}`,
+      );
+    } catch (error) {
+      console.error("Retry payment error:", error);
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to continue payment. Please try again.",
+      );
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
+  const handleDownloadReceipt = () => {
+    const lines = [
+      `Order ID: ORD-${order.id}`,
+      `Transaction ID: ${order.transactionId || "N/A"}`,
+      `Payment status: ${order.paymentStatus || "N/A"}`,
+      `Order status: ${order.status || "N/A"}`,
+      `Amount: $${(order.totalAmount || 0).toFixed(2)}`,
+      `Payment method: ${
+        order.paymentMethod === "card" ? "Credit Card" : order.paymentMethod
+      }`,
+      `Date: ${formatDate(order.createdAt)}`,
+      "\nThank you for shopping with us.",
+    ];
+
+    const blob = new Blob([lines.join("\n")], {
+      type: "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `receipt-ORD-${order.id}.txt`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: "bg-orange-100 text-orange-700",
@@ -152,7 +207,7 @@ const OrderConfirmationPage = () => {
 
   const getStatusText = (status) => {
     const texts = {
-      pending: "Processing",
+      pending: "Awaiting Payment",
       processing: "Processing",
       shipped: "On The Way",
       delivered: "Delivered",
@@ -164,8 +219,9 @@ const OrderConfirmationPage = () => {
 
   const getStatusDescription = (status) => {
     const descriptions = {
-      pending: "Your order is being prepared",
-      processing: "Your order is being prepared",
+      pending: "The order is created and awaiting payment confirmation.",
+      processing:
+        "Your payment was confirmed and the order is now being prepared.",
       shipped: "Your order is on its way",
       delivered: "Your order has been delivered",
       cancelled: "This order has been cancelled",
@@ -415,6 +471,38 @@ const OrderConfirmationPage = () => {
           <Link to="/orders" className="btn-secondary flex items-center gap-2">
             View All Orders
           </Link>
+          {(order.status?.toLowerCase() === "failed" ||
+            order.status?.toLowerCase() === "pending") && (
+            <button
+              onClick={handleRetryPayment}
+              disabled={isRetrying}
+              className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-all duration-200 font-medium flex items-center gap-2 disabled:opacity-50"
+            >
+              {isRetrying ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Retrying payment...</span>
+                </>
+              ) : (
+                <>
+                  <FiCreditCard className="h-4 w-4" />
+                  <span>Continue Payment</span>
+                </>
+              )}
+            </button>
+          )}
+          {(order.paymentStatus === "completed" ||
+            order.status === "processing" ||
+            order.status === "failed" ||
+            order.paymentStatus === "failed") && (
+            <button
+              onClick={handleDownloadReceipt}
+              className="bg-secondary text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium flex items-center gap-2"
+            >
+              <FiDownload className="h-4 w-4" />
+              Download Receipt
+            </button>
+          )}
           {canCancel && (
             <button
               onClick={handleCancelOrder}

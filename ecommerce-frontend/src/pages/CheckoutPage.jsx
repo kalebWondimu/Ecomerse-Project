@@ -161,14 +161,10 @@ const CheckoutPage = () => {
       setOrderPlaced(true);
       await clearCart();
       toast.success(
-        paymentResponse.message ||
-          "Please complete the payment in the new window.",
+        paymentResponse.message || "Redirecting to secure checkout...",
       );
       if (paymentResponse.checkoutUrl) {
-        window.open(paymentResponse.checkoutUrl, "_blank");
-        navigate(
-          `/payment-result?tx_ref=${paymentResponse.transactionId}&orderId=${newOrderId}`,
-        );
+        window.location.href = paymentResponse.checkoutUrl;
         return;
       }
 
