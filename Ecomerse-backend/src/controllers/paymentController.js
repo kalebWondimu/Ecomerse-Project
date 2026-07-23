@@ -1,10 +1,46 @@
 const axios = require('axios');
-const { Order } = require('../models');
+const { Order, Product } = require('../models');
+
+const getEtbAmount = (amount) => {
+  const rate = Number(process.env.USD_TO_ETB_RATE || 161.5);
+  return Number((Number(amount) * rate).toFixed(2));
+};
+
+const finalizeSuccessfulPayment = async (order) => {
+  if (!order) return;
+
+  order.paymentStatus = 'completed';
+  order.status = 'processing';
+  await order.save();
+
+  if (!order.items?.length) return;
+
+  for (const item of order.items) {
+    const product = await Product.findByPk(item.productId);
+    if (!product) continue;
+
+    const requestedQty = Number(item.quantity || 0);
+    if (product.stock < requestedQty) {
+      product.stock = 0;
+    } else {
+      product.stock -= requestedQty;
+    }
+    await product.save();
+  }
+};
+
+const markFailedPayment = async (order) => {
+  if (!order) return;
+
+  order.paymentStatus = 'failed';
+  order.status = 'failed';
+  await order.save();
+};
 
 // Chapa Payment Integration
 exports.initiateChapPayment = async (req, res) => {
   try {
-    const { orderId, amount, email } = req.body;
+    const { orderId, amount, email, currency = 'USD' } = req.body;
 
     if (!orderId || !amount || !email) {
       return res.status(400).json({
@@ -23,8 +59,12 @@ exports.initiateChapPayment = async (req, res) => {
     const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 
     const txRef = `ORD-${String(orderId).padStart(6, '0')}-${Date.now()}`;
+    const requestedCurrency = String(currency || 'USD').toUpperCase();
+    const chapaAmount = requestedCurrency === 'ETB'
+      ? Number(amount)
+      : getEtbAmount(amount);
     const payload = {
-      amount: amount,
+      amount: Number(chapaAmount.toFixed(2)),
       currency: 'ETB',
       email: email,
       first_name: 'Customer',
@@ -109,11 +149,16 @@ exports.chapaCallback = async (req, res) => {
     if (status === 'success' && txRef) {
       const order = await Order.findOne({ where: { transactionId: txRef } });
       if (order) {
-        order.paymentStatus = 'completed';
-        order.status = 'processing';
-        await order.save();
+        await finalizeSuccessfulPayment(order);
       }
       return res.json({ success: true, message: 'Payment confirmed' });
+    }
+
+    if (txRef) {
+      const order = await Order.findOne({ where: { transactionId: txRef } });
+      if (order) {
+        await markFailedPayment(order);
+      }
     }
 
     res.json({ success: false, message: 'Payment failed or not confirmed' });
@@ -146,9 +191,9 @@ exports.verifyPayment = async (req, res) => {
 
       const verifyData = verifyResponse.data;
       if (verifyData?.status === 'success' && verifyData?.data?.status === 'success') {
-        order.paymentStatus = 'completed';
-        order.status = 'processing';
-        await order.save();
+        await finalizeSuccessfulPayment(order);
+      } else {
+        await markFailedPayment(order);
       }
     }
 
@@ -180,12 +225,17 @@ exports.verifyPaymentPublic = async (req, res) => {
     });
 
     const verifyData = verifyResponse.data;
+    const order = await Order.findOne({ where: { transactionId } });
 
     // Return sanitized verification result
     return res.json({
       transactionId,
       chapaStatus: verifyData?.status || 'failed',
       chapaData: verifyData?.data || null,
+      amount: verifyData?.data?.amount || order?.totalAmount || null,
+      currency: verifyData?.data?.currency || 'ETB',
+      paymentStatus: order?.paymentStatus || null,
+      orderStatus: order?.status || null,
     });
   } catch (error) {
     console.error('Public payment verification error:', error?.message || error);

@@ -2,16 +2,17 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import paymentService from "../services/paymentService";
 import { useAuth } from "../context/AuthContext";
+import { useStoreSettings } from "../context/StoreSettingsContext";
 
 const PaymentResultPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [orderId, setOrderId] = useState(null);
-  const [redirectCountdown, setRedirectCountdown] = useState(3);
 
   useEffect(() => {
     const query = new URLSearchParams(
@@ -27,28 +28,10 @@ const PaymentResultPage = () => {
       return;
     }
 
-    let intervalId;
-
     const verifyPayment = async () => {
       try {
         const data = await paymentService.verifyPaymentPublic(txRef);
         setResult({ ...data, orderId: foundOrderId });
-
-        const isSuccess =
-          data.chapaStatus === "success" &&
-          data.chapaData?.status === "success";
-        if (isSuccess && isAuthenticated && foundOrderId) {
-          let count = 3;
-          setRedirectCountdown(count);
-          intervalId = window.setInterval(() => {
-            count -= 1;
-            setRedirectCountdown(count);
-            if (count <= 0) {
-              window.clearInterval(intervalId);
-              navigate(`/order-confirmation/${foundOrderId}`);
-            }
-          }, 1000);
-        }
       } catch (err) {
         setError(
           err.response?.data?.message ||
@@ -61,12 +44,11 @@ const PaymentResultPage = () => {
     };
 
     verifyPayment();
-    return () => {
-      if (intervalId) {
-        window.clearInterval(intervalId);
-      }
-    };
   }, [location.search, location.hash, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    document.title = `${storeSettings.storeName || "Store"} | Payment Status`;
+  }, [storeSettings.storeName]);
 
   const renderStatus = () => {
     if (!result) return null;
@@ -74,6 +56,9 @@ const PaymentResultPage = () => {
     const isSuccess =
       result.chapaStatus === "success" &&
       result.chapaData?.status === "success";
+
+    const amount = result?.amount ?? result?.chapaData?.amount;
+    const currency = result?.currency || result?.chapaData?.currency || "ETB";
 
     return (
       <div className="rounded-lg bg-white p-8 shadow-md">
@@ -84,9 +69,9 @@ const PaymentResultPage = () => {
           Transaction reference:{" "}
           <span className="font-mono">{result.transactionId}</span>
         </p>
-        {result.chapaData?.amount && (
+        {amount && (
           <p className="text-gray-700 mb-4">
-            Amount: {result.chapaData.amount} {result.chapaData.currency}
+            Amount: {Number(amount).toFixed(2)} {currency}
           </p>
         )}
         <p className="text-gray-700 mb-4">
@@ -99,22 +84,25 @@ const PaymentResultPage = () => {
             <span className="font-semibold">{result.chapaData.status}</span>
           </p>
         )}
-        {result.chapaStatus === "success" &&
-          result.chapaData?.status === "success" && (
-            <p className="text-gray-600 mb-4">
-              Payment confirmed successfully. You will be redirected to your
-              order page in {redirectCountdown} second
-              {redirectCountdown === 1 ? "" : "s"}.
+        {isSuccess ? (
+          <div className="rounded-md border border-green-200 bg-green-50 p-4 text-green-700 mb-6">
+            <p className="font-semibold">
+              Your payment was confirmed successfully.
             </p>
-          )}
-        {result.chapaStatus === "success" &&
-          result.chapaData?.status === "success" &&
-          !isAuthenticated && (
-            <p className="text-gray-600 mb-4">
-              Payment confirmed successfully. Please log in to view your full
-              order details on the site.
+            <p className="mt-1">
+              We have received your payment and your order is now being
+              prepared.
             </p>
-          )}
+          </div>
+        ) : (
+          <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-700 mb-6">
+            <p className="font-semibold">Payment could not be confirmed.</p>
+            <p className="mt-1">
+              No completed order was created for this transaction. Please try
+              again or contact support if you believe this is an error.
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           {orderId && isAuthenticated && (
             <Link

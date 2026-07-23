@@ -145,6 +145,7 @@ const OrderConfirmationPage = () => {
       shipped: "bg-blue-100 text-blue-700",
       delivered: "bg-green-100 text-green-700",
       cancelled: "bg-red-100 text-red-700",
+      failed: "bg-red-100 text-red-700",
     };
     return colors[status?.toLowerCase()] || "bg-gray-100 text-gray-800";
   };
@@ -156,6 +157,7 @@ const OrderConfirmationPage = () => {
       shipped: "On The Way",
       delivered: "Delivered",
       cancelled: "Cancelled",
+      failed: "Payment Failed",
     };
     return texts[status?.toLowerCase()] || status || "Processing";
   };
@@ -167,6 +169,7 @@ const OrderConfirmationPage = () => {
       shipped: "Your order is on its way",
       delivered: "Your order has been delivered",
       cancelled: "This order has been cancelled",
+      failed: "The payment for this order could not be confirmed",
     };
     return descriptions[status?.toLowerCase()] || "Processing your order";
   };
@@ -223,7 +226,7 @@ const OrderConfirmationPage = () => {
     );
   }
 
-  const canCancel = !["shipped", "delivered", "cancelled"].includes(
+  const canCancel = !["shipped", "delivered", "cancelled", "failed"].includes(
     order.status?.toLowerCase(),
   );
 

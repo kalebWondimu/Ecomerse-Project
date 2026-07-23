@@ -116,6 +116,8 @@ const OrdersPage = () => {
         return <FiTruck className="h-5 w-5 text-blue-600" />;
       case "cancelled":
         return <FiXCircle className="h-5 w-5 text-red-600" />;
+      case "failed":
+        return <FiXCircle className="h-5 w-5 text-red-600" />;
       default:
         return <FiClock className="h-5 w-5 text-orange-500" />;
     }
@@ -150,6 +152,12 @@ const OrdersPage = () => {
       cancelled: {
         text: "Cancelled",
         description: "This order has been cancelled",
+        color: "bg-red-100 text-red-700",
+        canCancel: false,
+      },
+      failed: {
+        text: "Payment Failed",
+        description: "The payment for this order could not be confirmed",
         color: "bg-red-100 text-red-700",
         canCancel: false,
       },

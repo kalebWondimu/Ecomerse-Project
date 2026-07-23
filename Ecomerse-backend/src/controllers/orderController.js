@@ -12,7 +12,6 @@ exports.createOrder = async (req, res) => {
     // Also validate stock availability before creating order
     const items = [];
     let totalAmount = 0;
-    const stockChecks = [];
     
     for (const i of cart.items) {
       const prod = await Product.findByPk(i.productId);
@@ -36,12 +35,6 @@ exports.createOrder = async (req, res) => {
         price: prod.price,
       });
       totalAmount += i.quantity * prod.price;
-      
-      // Store product and quantity for stock decrement
-      stockChecks.push({
-        product: prod,
-        quantity: i.quantity
-      });
     }
     
     // Create order first
@@ -52,12 +45,6 @@ exports.createOrder = async (req, res) => {
       paymentMethod: req.body.paymentMethod,
       shippingAddress: req.body.shippingAddress,
     });
-    
-    // Then decrement stock for each product (professional e-commerce practice)
-    for (const check of stockChecks) {
-      check.product.stock -= check.quantity;
-      await check.product.save();
-    }
     
     // clear cart after creating order
     cart.items = [];

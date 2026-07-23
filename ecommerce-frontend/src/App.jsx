@@ -310,6 +310,16 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   return isAuthenticated ? children : null;
 };
 
+const DocumentTitleUpdater = () => {
+  const { settings: storeSettings } = useStoreSettings();
+
+  useEffect(() => {
+    document.title = storeSettings.storeName || "Store";
+  }, [storeSettings.storeName]);
+
+  return null;
+};
+
 // Main App Component
 function App() {
   return (
@@ -317,6 +327,7 @@ function App() {
       <AuthProvider>
         <StoreSettingsProvider>
           <CartProvider>
+            <DocumentTitleUpdater />
             <div className="min-h-screen bg-gray-50 flex flex-col">
               <Navbar />
 

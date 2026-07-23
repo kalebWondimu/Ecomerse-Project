@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useStoreSettings } from "../context/StoreSettingsContext";
 import orderService from "../services/orderService";
 import paymentService from "../services/paymentService";
 import userService from "../services/userService";
@@ -22,6 +23,7 @@ import {
 const CheckoutPage = () => {
   const { cart, loading, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -148,24 +150,31 @@ const CheckoutPage = () => {
 
       const response = await orderService.createOrder(orderData);
       const newOrderId = response.id;
-      const paymentAmount = parseFloat(total.toFixed(2));
+      const paymentAmount = Number(total.toFixed(2));
 
-      // Chapa payment
       const paymentResponse = await paymentService.initiateChapa({
         orderId: newOrderId,
         amount: paymentAmount,
+        currency: storeSettings.currency || "USD",
         email: shippingInfo.email,
       });
       setOrderPlaced(true);
       await clearCart();
-      toast.success(paymentResponse.message || "Redirecting to Chapa checkout...");
+      toast.success(
+        paymentResponse.message ||
+          "Please complete the payment in the new window.",
+      );
       if (paymentResponse.checkoutUrl) {
         window.open(paymentResponse.checkoutUrl, "_blank");
-        navigate(`/order-confirmation/${newOrderId}`);
+        navigate(
+          `/payment-result?tx_ref=${paymentResponse.transactionId}&orderId=${newOrderId}`,
+        );
         return;
       }
 
-      navigate(`/order-confirmation/${newOrderId}`);
+      navigate(
+        `/payment-result?tx_ref=${paymentResponse.transactionId}&orderId=${newOrderId}`,
+      );
     } catch (error) {
       console.error("Checkout error:", error);
       toast.error(
@@ -497,7 +506,8 @@ const CheckoutPage = () => {
                       <FiCreditCard className="mr-2" /> Payment via Chapa
                     </h3>
                     <p className="text-sm text-gray-700">
-                      Secure payment using Chapa. You will be redirected to the Chapa checkout page.
+                      Secure payment using Chapa. You will be redirected to the
+                      Chapa checkout page.
                     </p>
                   </div>
 
@@ -616,10 +626,6 @@ const CheckoutPage = () => {
                       </div>
                     </div>
                   )}
-
-
-
-
 
                   <div className="flex justify-between pt-4">
                     <button
