@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   HashRouter as Router,
   Routes,
@@ -14,7 +14,6 @@ import {
   StoreSettingsProvider,
   useStoreSettings,
 } from "./context/StoreSettingsContext";
-import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
@@ -55,12 +54,12 @@ const VerifyEmailPage = () => (
   </div>
 );
 
-// Navbar Component
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
   const location = useLocation();
   const { settings: storeSettings } = useStoreSettings();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Hide navbar for admin routes
   if (location.pathname.startsWith("/admin")) {
@@ -74,18 +73,22 @@ const Navbar = () => {
         : "text-gray-600 hover:text-primary-600"
     }`;
 
+  const closeMenu = () => setMobileMenuOpen(false);
+
   return (
-    <nav className="bg-white shadow-sm sticky top-0 z-50">
-      <div className="container-custom py-4">
-        <div className="flex justify-between items-center">
+    <nav className="bg-white/95 shadow-sm sticky top-0 z-50 backdrop-blur">
+      <div className="container-custom py-3 sm:py-4">
+        <div className="flex items-center justify-between gap-3">
           <NavLink
             to="/"
             end
-            className="text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors"
+            className="text-lg sm:text-2xl font-bold text-primary-600 hover:text-primary-700 transition-colors"
+            onClick={closeMenu}
           >
             {storeSettings.storeName || "E-Store"}
           </NavLink>
-          <div className="flex items-center space-x-6">
+
+          <div className="hidden md:flex md:items-center md:space-x-6">
             <NavLink to="/" end className={navLinkClass}>
               Home
             </NavLink>
@@ -144,9 +147,139 @@ const Navbar = () => {
               </>
             )}
           </div>
+
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center rounded-lg border border-gray-200 p-2 text-gray-700"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="Toggle navigation menu"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d={
+                  mobileMenuOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
+                }
+              />
+            </svg>
+          </button>
         </div>
+
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-3 border-t border-gray-100 pt-3 pb-1">
+            <div className="flex flex-col space-y-2">
+              <NavLink to="/" end className={navLinkClass} onClick={closeMenu}>
+                Home
+              </NavLink>
+              <NavLink
+                to="/products"
+                className={navLinkClass}
+                end={false}
+                onClick={closeMenu}
+              >
+                Products
+              </NavLink>
+              <NavLink to="/cart" className={navLinkClass} onClick={closeMenu}>
+                Cart {itemCount > 0 ? `(${itemCount})` : ""}
+              </NavLink>
+              {isAuthenticated ? (
+                <>
+                  {(user?.role === "admin" || user?.role === "super-admin") && (
+                    <NavLink
+                      to="/admin"
+                      className={navLinkClass}
+                      onClick={closeMenu}
+                    >
+                      Admin
+                    </NavLink>
+                  )}
+                  <NavLink
+                    to="/favorites"
+                    className={navLinkClass}
+                    onClick={closeMenu}
+                  >
+                    Favorites
+                  </NavLink>
+                  <NavLink
+                    to="/orders"
+                    className={navLinkClass}
+                    onClick={closeMenu}
+                  >
+                    Orders
+                  </NavLink>
+                  <NavLink
+                    to="/profile"
+                    className={navLinkClass}
+                    onClick={closeMenu}
+                  >
+                    Profile
+                  </NavLink>
+                  <button
+                    onClick={() => {
+                      closeMenu();
+                      logout();
+                    }}
+                    className="text-left text-gray-600 hover:text-primary-600 transition-colors"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <NavLink
+                    to="/login"
+                    className={navLinkClass}
+                    onClick={closeMenu}
+                  >
+                    Login
+                  </NavLink>
+                  <NavLink
+                    to="/register"
+                    className="btn-primary inline-flex justify-center"
+                    onClick={closeMenu}
+                  >
+                    Sign Up
+                  </NavLink>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </nav>
+  );
+};
+
+const NetworkStatusBanner = () => {
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine !== false);
+
+  useEffect(() => {
+    const updateStatus = () => setIsOnline(navigator.onLine !== false);
+    window.addEventListener("online", updateStatus);
+    window.addEventListener("offline", updateStatus);
+
+    return () => {
+      window.removeEventListener("online", updateStatus);
+      window.removeEventListener("offline", updateStatus);
+    };
+  }, []);
+
+  if (isOnline) return null;
+
+  return (
+    <div className="bg-amber-600 text-white px-4 py-3 text-center text-sm font-medium">
+      No internet connection. Some features may be unavailable until you’re back
+      online.
+    </div>
   );
 };
 
@@ -314,7 +447,13 @@ const DocumentTitleUpdater = () => {
   const { settings: storeSettings } = useStoreSettings();
 
   useEffect(() => {
-    document.title = storeSettings.storeName || "Store";
+    const title = storeSettings.storeName || "Store";
+    document.title = title;
+    try {
+      localStorage.setItem("storeName", title);
+    } catch {
+      // Ignore storage errors and keep the UI responsive.
+    }
   }, [storeSettings.storeName]);
 
   return null;
@@ -329,6 +468,7 @@ function App() {
           <CartProvider>
             <DocumentTitleUpdater />
             <div className="min-h-screen bg-gray-50 flex flex-col">
+              <NetworkStatusBanner />
               <Navbar />
 
               {/* Main Content */}

@@ -10,6 +10,7 @@ const ContactPage = () => {
     subject: "",
     message: "",
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,6 +29,8 @@ const ContactPage = () => {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       await contactService.sendContactMessage(contact);
       toast.success("Your message has been sent. We'll get back to you soon.");
@@ -35,16 +38,18 @@ const ContactPage = () => {
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          "Unable to send your message. Please try again later."
+          "Unable to send your message. Please try again later.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="container-custom py-16">
       <div className="mx-auto grid gap-10 lg:grid-cols-2">
-        <div className="rounded-3xl bg-white p-10 shadow-lg">
-          <h1 className="text-4xl font-bold mb-4">Contact Us</h1>
+        <div className="rounded-3xl bg-white p-6 shadow-lg sm:p-10">
+          <h1 className="text-3xl font-bold mb-4 sm:text-4xl">Contact Us</h1>
           <p className="text-gray-600 mb-6">
             Have a question, feedback, or need help with an order? Send us a
             message and our support team will reply within one business day.
@@ -72,7 +77,7 @@ const ContactPage = () => {
           </div>
         </div>
 
-        <div className="rounded-3xl bg-white p-10 shadow-lg">
+        <div className="rounded-3xl bg-white p-6 shadow-lg sm:p-10">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="font-medium text-gray-900">Name</label>
@@ -82,7 +87,8 @@ const ContactPage = () => {
                 value={contact.name}
                 onChange={handleChange}
                 className="input-field mt-2 w-full"
-                placeholder="Your name"
+                placeholder="Abebe Kebede"
+                required
               />
             </div>
             <div>
@@ -93,7 +99,8 @@ const ContactPage = () => {
                 value={contact.email}
                 onChange={handleChange}
                 className="input-field mt-2 w-full"
-                placeholder="you@example.com"
+                placeholder="abebe.kebede@example.com"
+                required
               />
             </div>
             <div>
@@ -104,7 +111,8 @@ const ContactPage = () => {
                 value={contact.subject}
                 onChange={handleChange}
                 className="input-field mt-2 w-full"
-                placeholder="How can we help?"
+                placeholder="Order issue or product question"
+                required
               />
             </div>
             <div>
@@ -114,11 +122,16 @@ const ContactPage = () => {
                 value={contact.message}
                 onChange={handleChange}
                 className="input-field mt-2 w-full min-h-[140px]"
-                placeholder="Write your message here"
+                placeholder="Tell us what you need help with"
+                required
               />
             </div>
-            <button type="submit" className="btn-primary w-full">
-              Send Message
+            <button
+              type="submit"
+              className="btn-primary w-full disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Sending..." : "Send Message"}
             </button>
           </form>
         </div>
