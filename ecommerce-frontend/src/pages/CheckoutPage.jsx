@@ -346,7 +346,7 @@ const CheckoutPage = () => {
                             })
                           }
                           className={`input-field pl-10 ${errors.email ? "border-red-500" : ""}`}
-                          placeholder="john@example.com"
+                          placeholder="abebe.kebede@example.com"
                         />
                       </div>
                       {errors.email && (
@@ -375,7 +375,7 @@ const CheckoutPage = () => {
                           })
                         }
                         className={`input-field pl-10 ${errors.phone ? "border-red-500" : ""}`}
-                        placeholder="(555) 123-4567"
+                        placeholder="+251 911 123 456"
                       />
                     </div>
                     {errors.phone && (

@@ -54,7 +54,16 @@ api.interceptors.response.use(
           toast.error(error.response.data?.message || 'An error occurred');
       }
     } else if (error.request) {
-      toast.error('Cannot connect to server. Please check your internet.');
+      const offlineMessage = 'You appear to be offline. Please check your internet connection and try again.';
+      toast.error(offlineMessage, {
+        duration: 5000,
+        style: {
+          borderRadius: '12px',
+          background: '#111827',
+          color: '#F9FAFB',
+          padding: '12px 16px',
+        },
+      });
     }
     return Promise.reject(error);
   }

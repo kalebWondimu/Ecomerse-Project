@@ -131,10 +131,7 @@ const ProductDetailPage = () => {
       return;
     }
 
-    const success = await addToCart(product, quantity);
-    if (success) {
-      toast.success(`${product.name} added to cart!`);
-    }
+    await addToCart(product, quantity);
   };
 
   const handleQuantityChange = (type) => {

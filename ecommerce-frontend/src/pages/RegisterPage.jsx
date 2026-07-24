@@ -63,7 +63,7 @@ const RegisterPage = () => {
       return false;
     }
 
-    if (formData.phone && !/^[\d\s\+\-\(\)]{10,}$/.test(formData.phone)) {
+    if (formData.phone && !/^[\d\s()+-]{10,}$/.test(formData.phone)) {
       toast.error("Please enter a valid phone number");
       return false;
     }
@@ -232,7 +232,7 @@ const RegisterPage = () => {
                       value={formData.name}
                       onChange={handleChange}
                       className="input-field pl-10"
-                      placeholder="John Doe"
+                      placeholder="Abebe Kebede"
                       disabled={loading}
                     />
                   </div>
@@ -259,7 +259,7 @@ const RegisterPage = () => {
                       value={formData.email}
                       onChange={handleChange}
                       className="input-field pl-10"
-                      placeholder="you@example.com"
+                      placeholder="abebe.kebede@example.com"
                       disabled={loading}
                     />
                   </div>
@@ -286,7 +286,7 @@ const RegisterPage = () => {
                       value={formData.phone}
                       onChange={handleChange}
                       className="input-field pl-10"
-                      placeholder="(555) 123-4567"
+                      placeholder="+251 911 123 456"
                       disabled={loading}
                     />
                   </div>

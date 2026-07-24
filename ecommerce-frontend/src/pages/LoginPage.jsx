@@ -103,7 +103,7 @@ const LoginPage = () => {
                   value={formData.email}
                   onChange={handleChange}
                   className="input-field pl-10"
-                  placeholder="you@example.com"
+                  placeholder="abebe.kebede@example.com"
                   disabled={loading}
                 />
               </div>

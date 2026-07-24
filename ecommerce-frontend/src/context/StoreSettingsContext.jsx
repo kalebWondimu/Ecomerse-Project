@@ -14,14 +14,29 @@ export const useStoreSettings = () => {
 };
 
 export const StoreSettingsProvider = ({ children }) => {
-  const [settings, setSettings] = useState({
-    storeName: "E-Store",
-    storeEmail: "contact@estore.com",
-    storePhone: "+1 (555) 123-4567",
-    storeAddress: "123 Commerce St, New York, NY 10001",
-    currency: "USD",
-    timezone: "America/New_York",
-    language: "en",
+  const [settings, setSettings] = useState(() => {
+    try {
+      const savedStoreName = localStorage.getItem("storeName");
+      return {
+        storeName: savedStoreName || "E-Store",
+        storeEmail: "contact@estore.com",
+        storePhone: "+251 911 123 456",
+        storeAddress: "Addis Ababa, Ethiopia",
+        currency: "ETB",
+        timezone: "Africa/Addis_Ababa",
+        language: "en",
+      };
+    } catch {
+      return {
+        storeName: "E-Store",
+        storeEmail: "contact@estore.com",
+        storePhone: "+251 911 123 456",
+        storeAddress: "Addis Ababa, Ethiopia",
+        currency: "ETB",
+        timezone: "Africa/Addis_Ababa",
+        language: "en",
+      };
+    }
   });
   const [loading, setLoading] = useState(true);
 
@@ -41,7 +56,9 @@ export const StoreSettingsProvider = ({ children }) => {
         }));
         try {
           if (data.storeName) localStorage.setItem("storeName", data.storeName);
-        } catch (e) {}
+        } catch {
+          // Ignore storage errors and keep the UI responsive.
+        }
       } catch (error) {
         console.error("Failed to load store settings:", error);
       } finally {
@@ -57,7 +74,9 @@ export const StoreSettingsProvider = ({ children }) => {
     try {
       if (newSettings.storeName)
         localStorage.setItem("storeName", newSettings.storeName);
-    } catch (e) {}
+    } catch {
+      // Ignore storage errors and keep the UI responsive.
+    }
   };
 
   return (

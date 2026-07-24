@@ -55,7 +55,11 @@ const PaymentResultPage = () => {
   }, [location.search, location.hash, isAuthenticated, navigate]);
 
   useEffect(() => {
-    document.title = storeSettings.storeName || "Store";
+    const title = storeSettings.storeName || "Store";
+    document.title = title;
+    try {
+      localStorage.setItem("storeName", title);
+    } catch (e) {}
   }, [storeSettings.storeName]);
 
   const handleDownloadReceipt = () => {
@@ -139,9 +143,6 @@ const PaymentResultPage = () => {
             <p className="mt-1">
               We have received your payment and your order is now being
               prepared.
-            </p>
-            <p className="mt-2 text-sm text-gray-600">
-              You can download your receipt below for your records.
             </p>
           </div>
         ) : isPending ? (
