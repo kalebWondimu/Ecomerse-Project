@@ -13,6 +13,7 @@ const PaymentResultPage = () => {
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
   const [orderId, setOrderId] = useState(null);
+  const [chapaCheckoutUrl, setChapaCheckoutUrl] = useState(null);
 
   useEffect(() => {
     const query = new URLSearchParams(
@@ -20,7 +21,14 @@ const PaymentResultPage = () => {
     );
     const txRef = query.get("tx_ref");
     const foundOrderId = query.get("orderId");
+    const from = query.get("from");
     setOrderId(foundOrderId);
+    if (foundOrderId) {
+      try {
+        const saved = localStorage.getItem(`chapaCheckout_${foundOrderId}`);
+        if (saved) setChapaCheckoutUrl(saved);
+      } catch (e) {}
+    }
 
     if (!txRef) {
       setError("No transaction reference provided.");
@@ -154,13 +162,23 @@ const PaymentResultPage = () => {
           </div>
         )}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          {(isSuccess || result.paymentStatus === "failed") && (
+          {result && !isPending && (
             <button
               onClick={handleDownloadReceipt}
               className="inline-flex items-center justify-center rounded bg-secondary px-6 py-3 text-white hover:bg-gray-700"
             >
               Download Receipt
             </button>
+          )}
+          {chapaCheckoutUrl && (
+            <a
+              href={chapaCheckoutUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center rounded border border-gray-300 px-6 py-3 text-gray-800 hover:bg-gray-50"
+            >
+              Open Chapa receipt
+            </a>
           )}
           {orderId && isAuthenticated && (
             <Link

@@ -39,6 +39,9 @@ export const StoreSettingsProvider = ({ children }) => {
           timezone: data.timezone || prev.timezone,
           language: data.language || prev.language,
         }));
+        try {
+          if (data.storeName) localStorage.setItem("storeName", data.storeName);
+        } catch (e) {}
       } catch (error) {
         console.error("Failed to load store settings:", error);
       } finally {
@@ -51,6 +54,10 @@ export const StoreSettingsProvider = ({ children }) => {
 
   const updateStoreSettings = (newSettings) => {
     setSettings((prev) => ({ ...prev, ...newSettings }));
+    try {
+      if (newSettings.storeName)
+        localStorage.setItem("storeName", newSettings.storeName);
+    } catch (e) {}
   };
 
   return (

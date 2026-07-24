@@ -73,7 +73,7 @@ exports.initiateChapPayment = async (req, res) => {
       tx_ref: txRef,
       callback_url: `${backendUrl}/api/payments/chapa/callback`,
       // Use hash routing for the frontend app so the direct Chapa return URL resolves correctly.
-      return_url: `${frontendUrl}/#/payment-result?tx_ref=${txRef}&orderId=${orderId}`,
+      return_url: `${frontendUrl}/#/payment-result?tx_ref=${txRef}&orderId=${orderId}&from=chapa`,
       customization: {
         // Title must be <= 16 chars per Chapa API; description must not contain '#'
         title: 'Ecom Payment',
@@ -176,7 +176,7 @@ exports.retryChapPayment = async (req, res) => {
       phone_number: '',
       tx_ref: txRef,
       callback_url: `${backendUrl}/api/payments/chapa/callback`,
-      return_url: `${frontendUrl}/#/payment-result?tx_ref=${txRef}&orderId=${orderId}`,
+      return_url: `${frontendUrl}/#/payment-result?tx_ref=${txRef}&orderId=${orderId}&from=chapa`,
       customization: {
         title: 'Ecom Payment',
         description: `Order ORD-${orderId}`,
