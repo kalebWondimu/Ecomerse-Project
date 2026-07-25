@@ -149,14 +149,13 @@ const OrderConfirmationPage = () => {
         response.message || "Continue payment in the checkout window.",
       );
       if (response.checkoutUrl) {
-        // Open in a new tab so user can view Chapa receipt and download/screenshot it
         try {
           localStorage.setItem(
             `chapaCheckout_${order.id}`,
             response.checkoutUrl,
           );
         } catch (e) {}
-        window.open(response.checkoutUrl, "_blank");
+        window.location.assign(response.checkoutUrl);
         return;
       }
       navigate(

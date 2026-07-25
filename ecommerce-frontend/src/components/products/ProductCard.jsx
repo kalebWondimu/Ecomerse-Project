@@ -9,6 +9,9 @@ import toast from "react-hot-toast";
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const rating = Number(product.averageRating || 0);
+  const reviewCount = product.reviewCount || product.ratings?.length || 0;
+  const isTopRated = rating >= 4.5 && reviewCount > 0;
 
   const handleAddToCart = async (e) => {
     e.preventDefault();
@@ -27,57 +30,69 @@ const ProductCard = ({ product }) => {
     product.images && product.images.length > 0 ? product.images[0] : null;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+    <div className="group overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_10px_35px_-18px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_20px_45px_-20px_rgba(15,23,42,0.4)]">
       <Link to={`/products/${product.id}`}>
-        <div className="relative h-48 bg-gray-200 overflow-hidden">
+        <div className="relative h-56 overflow-hidden bg-slate-100">
           {productImage ? (
             <OptimizedImage
               src={productImage}
               alt={product.name}
-              className="h-full w-full group-hover:scale-110 transition-transform duration-300"
+              className="h-full w-full transition-transform duration-500 group-hover:scale-105"
               fallbackClassName="h-full w-full"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-200">
               <span className="text-6xl">📦</span>
             </div>
           )}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/20 via-transparent to-transparent" />
+
+          {isTopRated && (
+            <span className="absolute left-3 top-3 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
+              Top Rated
+            </span>
+          )}
+
           {product.stock < 5 && product.stock > 0 && (
-            <span className="absolute top-2 right-2 bg-orange-500 text-white text-xs px-2 py-1 rounded-full">
+            <span className="absolute right-3 top-3 rounded-full bg-orange-500 px-3 py-1 text-xs font-semibold text-white">
               Only {product.stock} left
             </span>
           )}
           {product.stock === 0 && (
-            <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+            <span className="absolute right-3 top-3 rounded-full bg-red-500 px-3 py-1 text-xs font-semibold text-white">
               Out of Stock
             </span>
           )}
         </div>
       </Link>
 
-      <div className="p-4">
+      <div className="p-5">
         <Link to={`/products/${product.id}`}>
-          <h3 className="font-semibold text-lg mb-1 hover:text-primary-600 transition-colors line-clamp-1">
+          <h3 className="mb-2 line-clamp-1 text-lg font-semibold text-slate-900 transition-colors hover:text-primary-600">
             {product.name}
           </h3>
         </Link>
-        <p className="text-gray-500 text-sm mb-2 line-clamp-2">
+        <p className="mb-4 line-clamp-2 text-sm leading-6 text-slate-500">
           {product.description}
         </p>
 
-        <div className="flex items-center mb-3">
-          <div className="flex text-yellow-400">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <FiStar
-                key={star}
-                className={
-                  star <= (product.averageRating || 0) ? "fill-current" : ""
-                }
-              />
-            ))}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex items-center text-amber-500">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <FiStar
+                  key={star}
+                  className={star <= Math.round(rating) ? "fill-current" : ""}
+                />
+              ))}
+            </div>
+            <span className="text-sm font-medium text-slate-600">
+              {rating.toFixed(1)}
+            </span>
           </div>
-          <span className="text-gray-400 text-xs ml-1">
-            ({product.ratings?.length || 0})
+          <span className="text-sm text-slate-400">
+            ({reviewCount} reviews)
           </span>
         </div>
 
@@ -87,10 +102,10 @@ const ProductCard = ({ product }) => {
           </span>
           <button
             onClick={handleAddToCart}
-            className={`p-2 rounded-lg transition-colors ${
+            className={`rounded-xl p-2.5 transition-colors ${
               product.stock > 0
                 ? "bg-primary-600 text-white hover:bg-primary-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "cursor-not-allowed bg-slate-200 text-slate-500"
             }`}
             disabled={product.stock === 0}
           >

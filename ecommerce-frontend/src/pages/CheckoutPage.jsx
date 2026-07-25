@@ -164,14 +164,13 @@ const CheckoutPage = () => {
         paymentResponse.message || "Redirecting to secure checkout...",
       );
       if (paymentResponse.checkoutUrl) {
-        // Open Chapa checkout in a new tab so users can view/download the provider receipt
         try {
           localStorage.setItem(
             `chapaCheckout_${newOrderId}`,
             paymentResponse.checkoutUrl,
           );
         } catch (e) {}
-        window.open(paymentResponse.checkoutUrl, "_blank");
+        window.location.assign(paymentResponse.checkoutUrl);
         return;
       }
 

@@ -35,70 +35,82 @@ const ProductsPage = () => {
   const pageSize = 9;
 
   useEffect(() => {
-    fetchProducts();
     extractCategories();
   }, []);
 
   useEffect(() => {
     const categoryFromUrl = searchParams.get("category");
-    setSelectedCategory(normalizeCategory(categoryFromUrl));
+    const nextCategory = normalizeCategory(categoryFromUrl);
+    setSelectedCategory((prev) =>
+      prev === nextCategory ? prev : nextCategory,
+    );
   }, [searchParams]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
       fetchProducts(currentPage);
-    }, 300);
+    }, 250);
 
     return () => clearTimeout(handler);
   }, [selectedCategory, sortBy, searchTerm, currentPage]);
 
+  const buildProductParams = (page = 1) => {
+    const params = {
+      page,
+      limit: pageSize,
+      sort: sortBy,
+    };
+
+    if (selectedCategory && selectedCategory !== "all") {
+      params.category = selectedCategory;
+    }
+
+    if (searchTerm && searchTerm.trim()) {
+      params.search = searchTerm.trim();
+    }
+
+    if (priceRange.min) {
+      params.minPrice = Number(priceRange.min);
+    }
+
+    if (priceRange.max) {
+      params.maxPrice = Number(priceRange.max);
+    }
+
+    return params;
+  };
+
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
-      const params = {};
-      if (selectedCategory && selectedCategory !== "all") {
-        params.category = selectedCategory;
-      }
-      params.sort = sortBy;
-      if (searchTerm && searchTerm.trim()) {
-        params.search = searchTerm.trim();
-      }
-      params.page = page;
-      params.limit = pageSize;
+      const params = buildProductParams(page);
       const data = await productService.getProducts(params);
-      let payload = {
-        products: [],
-        totalCount: 0,
-        currentPage: page,
-        totalPages: 1,
-      };
-
-      if (data) {
-        if (Array.isArray(data.products)) {
-          payload = data;
-        } else if (Array.isArray(data)) {
-          payload = {
-            products: data,
-            totalCount: data.length,
-            currentPage: page,
-            totalPages: 1,
-          };
-        }
-      }
-
+      const payload =
+        data && Array.isArray(data.products)
+          ? data
+          : { products: [], totalCount: 0, currentPage: page, totalPages: 1 };
       const nextProducts = Array.isArray(payload.products)
         ? payload.products
         : [];
       setProducts(nextProducts);
-      setTotalCount(Number(payload.totalCount || 0));
-      setTotalPages(Number(payload.totalPages || 1));
+      setTotalCount(Number(payload.totalCount || nextProducts.length || 0));
+      setTotalPages(
+        Math.max(
+          1,
+          Number(
+            payload.totalPages ||
+              Math.ceil(nextProducts.length / pageSize) ||
+              1,
+          ),
+        ),
+      );
       setCurrentPage(Number(payload.currentPage || page));
     } catch (error) {
-      console.error("Error loading products:", error);
-      toast.error("Failed to load products");
+      console.error("Failed to load products", error);
       setProducts([]);
       setTotalCount(0);
       setTotalPages(1);
+      toast.error("Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -123,17 +135,8 @@ const ProductsPage = () => {
   };
 
   const handlePriceFilter = () => {
-    let filtered = [...products];
-    if (priceRange.min) {
-      filtered = filtered.filter((p) => p.price >= Number(priceRange.min));
-    }
-    if (priceRange.max) {
-      filtered = filtered.filter((p) => p.price <= Number(priceRange.max));
-    }
-    setProducts(filtered);
-    setTotalCount(filtered.length);
-    setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
     setCurrentPage(1);
+    fetchProducts(1);
   };
 
   const handleCategoryChange = (value) => {
@@ -193,16 +196,31 @@ const ProductsPage = () => {
   return (
     <div className="container-custom py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">Our Products</h1>
-        <p className="text-gray-600">
-          Discover amazing products at great prices
-        </p>
+      <div className="mb-8 rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-50 to-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-[0.24em] text-primary-600">
+              Featured Collection
+            </p>
+            <h1 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+              Our Products
+            </h1>
+            <p className="mt-2 text-sm text-gray-600 sm:text-base">
+              Discover amazing products at great prices, curated for everyday
+              living.
+            </p>
+          </div>
+          <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-gray-600 shadow-sm">
+            {totalCount > 0
+              ? `${totalCount} items available`
+              : "Explore the catalog"}
+          </div>
+        </div>
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="mb-8">
-        <div className="flex flex-col md:flex-row gap-4">
+      <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row">
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1">
             <div className="relative flex items-center">
@@ -210,11 +228,8 @@ const ProductsPage = () => {
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="input-field pl-10 pr-24 w-full"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input-field pl-10 pr-24 w-full border-slate-200 bg-slate-50 focus:border-primary-500 focus:bg-white"
               />
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <button
@@ -229,7 +244,7 @@ const ProductsPage = () => {
           {/* Filter Toggle Button (Mobile) */}
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="md:hidden btn-secondary flex items-center justify-center gap-2"
+            className="md:hidden btn-secondary flex items-center justify-center gap-2 rounded-xl"
           >
             <FiFilter /> Filters
           </button>
@@ -237,11 +252,8 @@ const ProductsPage = () => {
           {/* Sort Dropdown */}
           <select
             value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="input-field md:w-48"
+            onChange={(e) => setSortBy(e.target.value)}
+            className="input-field md:w-48 border-slate-200 bg-slate-50"
           >
             <option value="newest">Newest First</option>
             <option value="price_low">Price: Low to High</option>
@@ -261,7 +273,7 @@ const ProductsPage = () => {
           md:sticky md:top-24 md:h-fit
         `}
         >
-          <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             {/* Mobile Close Button */}
             <div className="flex justify-between items-center mb-4 md:hidden">
               <h3 className="font-semibold text-lg">Filters</h3>
@@ -274,26 +286,29 @@ const ProductsPage = () => {
             <div className="mb-6">
               <h3 className="font-semibold mb-3">Categories</h3>
               <div className="space-y-2">
-                <label className="flex items-center">
+                <label className="flex items-center rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50">
                   <input
                     type="radio"
                     name="category"
                     value="all"
                     checked={selectedCategory === "all"}
                     onChange={() => handleCategoryChange("all")}
-                    className="mr-2"
+                    className="mr-2 accent-primary-600"
                   />
                   All Categories
                 </label>
                 {categories.map((category) => (
-                  <label key={category} className="flex items-center">
+                  <label
+                    key={category}
+                    className="flex items-center rounded-lg px-2 py-2 text-sm text-slate-700 transition hover:bg-slate-50"
+                  >
                     <input
                       type="radio"
                       name="category"
                       value={category}
                       checked={selectedCategory === category}
                       onChange={() => handleCategoryChange(category)}
-                      className="mr-2"
+                      className="mr-2 accent-primary-600"
                     />
                     {category}
                   </label>
@@ -357,12 +372,27 @@ const ProductsPage = () => {
             </div>
           ) : products.length > 0 ? (
             <>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-gray-500">
-                  Showing {products.length} of {totalCount} products
+              <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+                <p>
+                  Showing{" "}
+                  <span className="font-semibold text-slate-800">
+                    {products.length}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-800">
+                    {totalCount}
+                  </span>{" "}
+                  products
                 </p>
-                <p className="text-sm text-gray-500">
-                  Page {currentPage} of {totalPages}
+                <p>
+                  Page{" "}
+                  <span className="font-semibold text-slate-800">
+                    {currentPage}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-semibold text-slate-800">
+                    {totalPages}
+                  </span>
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -371,13 +401,13 @@ const ProductsPage = () => {
                 ))}
               </div>
               {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-8">
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
                   <button
                     onClick={() =>
                       setCurrentPage((page) => Math.max(1, page - 1))
                     }
                     disabled={currentPage === 1}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition hover:border-primary-500 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Previous
                   </button>
@@ -393,7 +423,7 @@ const ProductsPage = () => {
                       <button
                         key={page}
                         onClick={() => setCurrentPage(page)}
-                        className={`rounded-lg px-3 py-2 text-sm ${currentPage === page ? "bg-primary-600 text-white" : "border border-gray-300 text-gray-700"}`}
+                        className={`rounded-lg px-3 py-2 text-sm transition ${currentPage === page ? "bg-primary-600 text-white shadow-sm" : "border border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"}`}
                       >
                         {page}
                       </button>
@@ -404,7 +434,7 @@ const ProductsPage = () => {
                       setCurrentPage((page) => Math.min(totalPages, page + 1))
                     }
                     disabled={currentPage === totalPages}
-                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition hover:border-primary-500 hover:text-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Next
                   </button>
@@ -412,11 +442,13 @@ const ProductsPage = () => {
               )}
             </>
           ) : (
-            <div className="text-center py-16 bg-gray-50 rounded-2xl">
-              <div className="text-6xl mb-4">🔍</div>
-              <h3 className="text-2xl font-semibold mb-2">No products found</h3>
-              <p className="text-gray-500 mb-6">
-                Try adjusting your search or filters
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 py-16 text-center shadow-sm">
+              <div className="mb-4 text-6xl">🔍</div>
+              <h3 className="mb-2 text-2xl font-semibold text-slate-900">
+                No products found
+              </h3>
+              <p className="mb-6 text-sm text-slate-600 sm:text-base">
+                Try adjusting your search or filters to find what you need.
               </p>
               <button onClick={clearFilters} className="btn-primary">
                 Clear Filters

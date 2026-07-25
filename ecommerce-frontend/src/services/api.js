@@ -54,9 +54,12 @@ api.interceptors.response.use(
           toast.error(error.response.data?.message || 'An error occurred');
       }
     } else if (error.request) {
-      const offlineMessage = 'You appear to be offline. Please check your internet connection and try again.';
-      toast.error(offlineMessage, {
-        duration: 5000,
+      if (!window.navigator.onLine) {
+        return Promise.reject(error);
+      }
+
+      toast.error('The request could not be completed. Please try again.', {
+        duration: 4000,
         style: {
           borderRadius: '12px',
           background: '#111827',

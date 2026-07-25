@@ -276,9 +276,35 @@ const NetworkStatusBanner = () => {
   if (isOnline) return null;
 
   return (
-    <div className="bg-amber-600 text-white px-4 py-3 text-center text-sm font-medium">
-      No internet connection. Some features may be unavailable until you’re back
-      online.
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-900/35 px-4 backdrop-blur-[2px]">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white/95 p-8 text-center shadow-[0_20px_60px_-20px_rgba(15,23,42,0.35)]">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50 text-amber-600">
+          <svg
+            className="h-7 w-7"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="1.8"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M12 8v5m0 4h.01M10.29 3.86A10.95 10.95 0 0 1 20.9 8.1M3.1 8.1A10.95 10.95 0 0 1 13.7 3.86M5.6 14.8A8.95 8.95 0 0 1 18.4 14.8"
+            />
+          </svg>
+        </div>
+        <h2 className="text-xl font-semibold text-slate-900">
+          You’re currently offline
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Your connection appears to be unavailable right now. Please check your
+          internet connection and try again. Your work will stay here until
+          you’re back online.
+        </p>
+        <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          We’ll reconnect automatically once your connection is restored.
+        </div>
+      </div>
     </div>
   );
 };
