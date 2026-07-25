@@ -12,7 +12,9 @@ exports.createProduct = async (req, res) => {
 
 exports.getProducts = async (req, res) => {
   try {
-    const { page = 1, limit = 100, search, category, minPrice, maxPrice, sort = 'newest' } = req.query;
+    const requestedPage = Math.max(1, parseInt(req.query.page || 1, 10));
+    const requestedLimit = Math.max(1, parseInt(req.query.limit || 100, 10));
+    const { search, category, minPrice, maxPrice, sort = 'newest' } = req.query;
     const where = {};
     let order = [['createdAt', 'DESC']];
     
@@ -49,18 +51,19 @@ exports.getProducts = async (req, res) => {
     
     const products = await Product.findAll({
       where,
-      offset: (parseInt(page) - 1) * parseInt(limit),
-      limit: parseInt(limit),
+      offset: (requestedPage - 1) * requestedLimit,
+      limit: requestedLimit,
       order
     });
     
     const totalCount = await Product.count({ where });
+    const totalPages = Math.max(1, Math.ceil(totalCount / requestedLimit));
     
     res.json({
       products,
       totalCount,
-      currentPage: parseInt(page),
-      totalPages: Math.ceil(totalCount / parseInt(limit))
+      currentPage: requestedPage,
+      totalPages
     });
   } catch (error) {
     console.error('Get products error:', error);

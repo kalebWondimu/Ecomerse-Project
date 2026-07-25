@@ -63,12 +63,26 @@ const ProductsPage = () => {
         limit: pageSize,
       };
       const data = await productService.getProducts(params);
-      setProducts(Array.isArray(data?.products) ? data.products : data || []);
-      setTotalCount(data?.totalCount || 0);
+      const payload =
+        data && Array.isArray(data.products)
+          ? data
+          : { products: [], totalCount: 0, currentPage: page, totalPages: 1 };
+      const nextProducts = Array.isArray(payload.products)
+        ? payload.products
+        : [];
+      setProducts(nextProducts);
+      setTotalCount(Number(payload.totalCount || nextProducts.length || 0));
       setTotalPages(
-        data?.totalPages || Math.ceil((data?.products?.length || 0) / pageSize),
+        Math.max(
+          1,
+          Number(
+            payload.totalPages ||
+              Math.ceil(nextProducts.length / pageSize) ||
+              1,
+          ),
+        ),
       );
-      setCurrentPage(data?.currentPage || page);
+      setCurrentPage(Number(payload.currentPage || page));
     } catch (error) {
       toast.error("Failed to load products");
     } finally {
@@ -103,6 +117,9 @@ const ProductsPage = () => {
       filtered = filtered.filter((p) => p.price <= Number(priceRange.max));
     }
     setProducts(filtered);
+    setTotalCount(filtered.length);
+    setTotalPages(Math.max(1, Math.ceil(filtered.length / pageSize)));
+    setCurrentPage(1);
   };
 
   const handleCategoryChange = (value) => {
@@ -125,6 +142,37 @@ const ProductsPage = () => {
     setSearchParams({});
     setCurrentPage(1);
     fetchProducts(1);
+  };
+
+  const getVisiblePages = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, "ellipsis", totalPages];
+    }
+
+    if (currentPage >= totalPages - 2) {
+      return [
+        1,
+        "ellipsis",
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+
+    return [
+      1,
+      "ellipsis",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "ellipsis",
+      totalPages,
+    ];
   };
 
   return (
@@ -312,18 +360,24 @@ const ProductsPage = () => {
                   >
                     Previous
                   </button>
-                  {Array.from(
-                    { length: totalPages },
-                    (_, index) => index + 1,
-                  ).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`rounded-lg px-3 py-2 text-sm ${currentPage === page ? "bg-primary-600 text-white" : "border border-gray-300 text-gray-700"}`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  {getVisiblePages().map((page, index) =>
+                    page === "ellipsis" ? (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="px-2 text-gray-500"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`rounded-lg px-3 py-2 text-sm ${currentPage === page ? "bg-primary-600 text-white" : "border border-gray-300 text-gray-700"}`}
+                      >
+                        {page}
+                      </button>
+                    ),
+                  )}
                   <button
                     onClick={() =>
                       setCurrentPage((page) => Math.min(totalPages, page + 1))

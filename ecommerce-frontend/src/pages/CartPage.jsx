@@ -64,8 +64,10 @@ const CartPage = () => {
     return null;
   }
 
+  const showCartSkeleton = loading && (!cart?.items || cart.items.length === 0);
+
   // Show cart loading state
-  if (loading) {
+  if (showCartSkeleton) {
     return (
       <div className="container-custom py-12">
         <div className="animate-pulse">

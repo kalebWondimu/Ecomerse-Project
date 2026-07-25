@@ -43,26 +43,35 @@ export const CartProvider = ({ children }) => {
   const transformCartData = (backendCart) => {
     if (!backendCart) return { items: [], totalPrice: 0 };
 
-    let transformedItems = [];
+    const mergedItems = new Map();
 
     if (backendCart.items && Array.isArray(backendCart.items)) {
-      transformedItems = backendCart.items.map((item) => {
-        return {
-          id: item.productId,
-          productId: item.productId,
-          name: item.name || "Product",
-          price: item.price || 0,
-          quantity: item.quantity || 1,
-          stock: item.stock || 0,
-          category: item.category || "Uncategorized",
-          image: item.image || null,
-        };
+      backendCart.items.forEach((item) => {
+        const productId = item.productId;
+        const quantity = Number(item.quantity || 1);
+
+        if (!mergedItems.has(productId)) {
+          mergedItems.set(productId, {
+            id: productId,
+            productId,
+            name: item.name || "Product",
+            price: item.price || 0,
+            quantity,
+            stock: item.stock || 0,
+            category: item.category || "Uncategorized",
+            image: item.image || null,
+          });
+          return;
+        }
+
+        const existingItem = mergedItems.get(productId);
+        existingItem.quantity += quantity;
       });
     }
 
     return {
       ...backendCart,
-      items: transformedItems,
+      items: Array.from(mergedItems.values()),
       totalPrice: backendCart.totalPrice || 0,
     };
   };
@@ -102,10 +111,20 @@ export const CartProvider = ({ children }) => {
     }
   }, [isAuthenticated, authLoading, fetchCart]);
 
+  const showCartToast = (type, message) => {
+    const toastId = "cart-action";
+    toast.dismiss(toastId);
+    if (type === "success") {
+      toast.success(message, { id: toastId });
+    } else {
+      toast.error(message, { id: toastId });
+    }
+  };
+
   // Add item to cart
   const addToCart = async (product, quantity = 1) => {
     if (!isAuthenticated) {
-      toast.error("Please login to add items to cart");
+      showCartToast("error", "Please login to add items to cart");
       return false;
     }
 
@@ -120,11 +139,11 @@ export const CartProvider = ({ children }) => {
       const transformedData = transformCartData(updatedCart);
       setCartData(transformedData);
       calculateItemCount(transformedData);
-      toast.success(`${product.name} added to cart!`);
+      showCartToast("success", `${product.name} added to cart!`);
       return true;
     } catch (error) {
       console.error("Add to cart error:", error);
-      toast.error("Failed to add item to cart");
+      showCartToast("error", "Failed to add item to cart");
       return false;
     } finally {
       setLoading(false);
@@ -139,10 +158,10 @@ export const CartProvider = ({ children }) => {
       const transformedData = transformCartData(updatedCart);
       setCartData(transformedData);
       calculateItemCount(transformedData);
-      toast.success("Cart updated!");
+      showCartToast("success", "Cart updated!");
     } catch (error) {
       console.error("Update quantity error:", error);
-      toast.error("Failed to update cart");
+      showCartToast("error", "Failed to update cart");
     } finally {
       setLoading(false);
     }
@@ -156,10 +175,10 @@ export const CartProvider = ({ children }) => {
       const transformedData = transformCartData(updatedCart);
       setCartData(transformedData);
       calculateItemCount(transformedData);
-      toast.success("Item removed from cart");
+      showCartToast("success", "Item removed from cart");
     } catch (error) {
       console.error("Remove from cart error:", error);
-      toast.error("Failed to remove item");
+      showCartToast("error", "Failed to remove item");
     } finally {
       setLoading(false);
     }
@@ -172,10 +191,10 @@ export const CartProvider = ({ children }) => {
       await cartService.clearCart();
       setCartData({ items: [], totalPrice: 0 });
       setItemCount(0);
-      toast.success("Cart cleared");
+      showCartToast("success", "Cart cleared");
     } catch (error) {
       console.error("Clear cart error:", error);
-      toast.error("Failed to clear cart");
+      showCartToast("error", "Failed to clear cart");
     } finally {
       setLoading(false);
     }

@@ -4,7 +4,27 @@ const productService = {
   getProducts: async (params = {}) => {
     try {
       const response = await api.get('/products', { params });
-      return response.data.products || response.data;
+      const payload = response.data;
+
+      if (payload && Array.isArray(payload.products)) {
+        return payload;
+      }
+
+      if (Array.isArray(payload)) {
+        return {
+          products: payload,
+          totalCount: payload.length,
+          currentPage: 1,
+          totalPages: 1,
+        };
+      }
+
+      return {
+        products: [],
+        totalCount: 0,
+        currentPage: 1,
+        totalPages: 1,
+      };
     } catch (error) {
       console.error('Error fetching products:', error);
       throw error;

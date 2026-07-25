@@ -108,22 +108,45 @@ const OrdersPage = () => {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
+  const getStatusIcon = (order) => {
+    const paymentStatus = order?.paymentStatus?.toLowerCase();
+    const status = order?.status?.toLowerCase();
+
+    if (
+      paymentStatus === "failed" ||
+      status === "failed" ||
+      paymentStatus === "cancelled" ||
+      status === "cancelled"
+    ) {
+      return <FiXCircle className="h-5 w-5 text-red-600" />;
+    }
+
+    switch (status) {
       case "delivered":
         return <FiCheckCircle className="h-5 w-5 text-green-600" />;
       case "shipped":
         return <FiTruck className="h-5 w-5 text-blue-600" />;
-      case "cancelled":
-        return <FiXCircle className="h-5 w-5 text-red-600" />;
-      case "failed":
-        return <FiXCircle className="h-5 w-5 text-red-600" />;
       default:
         return <FiClock className="h-5 w-5 text-orange-500" />;
     }
   };
 
-  const getStatusDisplay = (status) => {
+  const getStatusDisplay = (order) => {
+    const status = order?.status?.toLowerCase();
+    const paymentStatus = order?.paymentStatus?.toLowerCase();
+    const isPaymentFailed =
+      ["failed", "cancelled", "abandoned"].includes(paymentStatus) ||
+      ["failed", "cancelled", "abandoned"].includes(status);
+
+    if (isPaymentFailed) {
+      return {
+        text: "Payment Failed",
+        description: "The payment for this order could not be confirmed.",
+        color: "bg-red-100 text-red-700",
+        canCancel: false,
+      };
+    }
+
     const statusMap = {
       pending: {
         text: "Awaiting Payment",
@@ -163,7 +186,7 @@ const OrdersPage = () => {
       },
     };
     return (
-      statusMap[status?.toLowerCase()] || {
+      statusMap[status] || {
         ...statusMap.pending,
         canCancel: true,
       }
@@ -239,7 +262,7 @@ const OrdersPage = () => {
               [...orders]
                 .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
                 .map((order) => {
-                  const status = getStatusDisplay(order.status);
+                  const status = getStatusDisplay(order);
                   const date = formatDate(order.createdAt);
                   const isCancelling = cancellingId === order.id;
 
@@ -252,7 +275,7 @@ const OrdersPage = () => {
                       <div className="bg-gray-50 px-6 py-4 border-b flex flex-wrap items-center justify-between">
                         <div className="flex items-center space-x-6">
                           <div className="flex items-center space-x-3">
-                            {getStatusIcon(order.status)}
+                            {getStatusIcon(order)}
                             <div>
                               <span
                                 className={`px-3 py-1 rounded-full text-xs font-medium ${status.color}`}

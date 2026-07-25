@@ -200,7 +200,17 @@ const OrderConfirmationPage = () => {
     URL.revokeObjectURL(url);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (order) => {
+    const status = order?.status?.toLowerCase();
+    const paymentStatus = order?.paymentStatus?.toLowerCase();
+    const isPaymentFailed =
+      ["failed", "cancelled", "abandoned"].includes(paymentStatus) ||
+      ["failed", "cancelled", "abandoned"].includes(status);
+
+    if (isPaymentFailed) {
+      return "bg-red-100 text-red-700";
+    }
+
     const colors = {
       pending: "bg-orange-100 text-orange-700",
       processing: "bg-orange-100 text-orange-700",
@@ -209,10 +219,20 @@ const OrderConfirmationPage = () => {
       cancelled: "bg-red-100 text-red-700",
       failed: "bg-red-100 text-red-700",
     };
-    return colors[status?.toLowerCase()] || "bg-gray-100 text-gray-800";
+    return colors[status] || "bg-gray-100 text-gray-800";
   };
 
-  const getStatusText = (status) => {
+  const getStatusText = (order) => {
+    const status = order?.status?.toLowerCase();
+    const paymentStatus = order?.paymentStatus?.toLowerCase();
+    const isPaymentFailed =
+      ["failed", "cancelled", "abandoned"].includes(paymentStatus) ||
+      ["failed", "cancelled", "abandoned"].includes(status);
+
+    if (isPaymentFailed) {
+      return "Payment Failed";
+    }
+
     const texts = {
       pending: "Awaiting Payment",
       processing: "Processing",
@@ -221,10 +241,20 @@ const OrderConfirmationPage = () => {
       cancelled: "Cancelled",
       failed: "Payment Failed",
     };
-    return texts[status?.toLowerCase()] || status || "Processing";
+    return texts[status] || status || "Processing";
   };
 
-  const getStatusDescription = (status) => {
+  const getStatusDescription = (order) => {
+    const status = order?.status?.toLowerCase();
+    const paymentStatus = order?.paymentStatus?.toLowerCase();
+    const isPaymentFailed =
+      ["failed", "cancelled", "abandoned"].includes(paymentStatus) ||
+      ["failed", "cancelled", "abandoned"].includes(status);
+
+    if (isPaymentFailed) {
+      return "The payment for this order could not be confirmed.";
+    }
+
     const descriptions = {
       pending: "The order is created and awaiting payment confirmation.",
       processing:
@@ -234,7 +264,7 @@ const OrderConfirmationPage = () => {
       cancelled: "This order has been cancelled",
       failed: "The payment for this order could not be confirmed",
     };
-    return descriptions[status?.toLowerCase()] || "Processing your order";
+    return descriptions[status] || "Processing your order";
   };
 
   const formatDate = (dateString) => {
@@ -315,9 +345,9 @@ const OrderConfirmationPage = () => {
             </div>
             <div className="text-right">
               <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}
+                className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order)}`}
               >
-                {getStatusText(order.status)}
+                {getStatusText(order)}
               </span>
               <p className="text-sm text-gray-500 mt-2">
                 Placed on {formatDate(order.createdAt)}
