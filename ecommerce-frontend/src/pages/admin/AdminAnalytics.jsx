@@ -40,7 +40,10 @@ const COLORS = [
 
 const AdminAnalytics = () => {
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState("month"); // 'week', 'month', 'year'
+  const [dateRange, setDateRange] = useState("month");
+  const [viewMode, setViewMode] = useState("overview");
+  const [dailyPage, setDailyPage] = useState(1);
+  const [pageSize] = useState(7);
   const [analytics, setAnalytics] = useState({
     revenue: { total: 0, growth: 0, data: [] },
     orders: { total: 0, growth: 0, data: [] },
@@ -51,6 +54,7 @@ const AdminAnalytics = () => {
   });
 
   useEffect(() => {
+    setDailyPage(1);
     fetchAnalytics();
   }, [dateRange]);
 
@@ -138,15 +142,15 @@ const AdminAnalytics = () => {
         }
       });
 
-      const revenueData = Object.entries(orderRevenueByDate).map(
-        ([date, value]) => ({
+      const revenueData = Object.entries(orderRevenueByDate)
+        .map(([date, value]) => ({
           name: date,
           revenue: value.revenue,
           sales: value.revenue,
           orders: value.orders,
           customers: value.customers.size,
-        }),
-      );
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name));
 
       const topSellingProducts = Object.values(topProductsMap)
         .sort((a, b) => b.revenue - a.revenue)
@@ -165,20 +169,43 @@ const AdminAnalytics = () => {
         );
       }).length;
 
+      const totalCustomers = users.length;
+      const totalOrders = recentOrders.length;
+      const conversionRate =
+        totalCustomers > 0 ? (totalOrders / totalCustomers) * 100 : 0;
+      const revenueGrowth =
+        revenueData.length > 1
+          ? ((revenueData[revenueData.length - 1].revenue -
+              revenueData[0].revenue) /
+              Math.max(revenueData[0].revenue, 1)) *
+            100
+          : 0;
+      const ordersGrowth =
+        revenueData.length > 1
+          ? ((revenueData[revenueData.length - 1].orders -
+              revenueData[0].orders) /
+              Math.max(revenueData[0].orders, 1)) *
+            100
+          : 0;
+      const customerGrowth =
+        totalCustomers > 0
+          ? (createdToday / Math.max(totalCustomers, 1)) * 100
+          : 0;
+
       setAnalytics({
         revenue: {
           total: totalRevenue,
-          growth: 0,
+          growth: revenueGrowth,
           data: revenueData,
         },
         orders: {
-          total: recentOrders.length,
-          growth: 0,
+          total: totalOrders,
+          growth: ordersGrowth,
           data: revenueData,
         },
         customers: {
-          total: users.length,
-          growth: 0,
+          total: totalCustomers,
+          growth: customerGrowth,
           data: [],
         },
         products: {
@@ -197,7 +224,47 @@ const AdminAnalytics = () => {
   };
 
   const formatCurrency = (amount) => {
-    return `$${amount.toLocaleString()}`;
+    return `$${Number(amount || 0).toLocaleString()}`;
+  };
+
+  const paginatedDailySales = analytics.dailySales.slice(
+    (dailyPage - 1) * pageSize,
+    dailyPage * pageSize,
+  );
+  const totalDailyPages = Math.max(
+    1,
+    Math.ceil(analytics.dailySales.length / pageSize),
+  );
+
+  const getVisibleDailyPages = () => {
+    if (totalDailyPages <= 5) {
+      return Array.from({ length: totalDailyPages }, (_, index) => index + 1);
+    }
+
+    if (dailyPage <= 3) {
+      return [1, 2, 3, 4, "ellipsis", totalDailyPages];
+    }
+
+    if (dailyPage >= totalDailyPages - 2) {
+      return [
+        1,
+        "ellipsis",
+        totalDailyPages - 3,
+        totalDailyPages - 2,
+        totalDailyPages - 1,
+        totalDailyPages,
+      ];
+    }
+
+    return [
+      1,
+      "ellipsis",
+      dailyPage - 1,
+      dailyPage,
+      dailyPage + 1,
+      "ellipsis",
+      totalDailyPages,
+    ];
   };
 
   const downloadReport = () => {
@@ -256,6 +323,14 @@ const AdminAnalytics = () => {
                 <option value="week">Last 7 days</option>
                 <option value="month">Last 30 days</option>
                 <option value="year">Last 12 months</option>
+              </select>
+              <select
+                value={viewMode}
+                onChange={(e) => setViewMode(e.target.value)}
+                className="input-field w-40"
+              >
+                <option value="overview">Overview</option>
+                <option value="details">Detailed View</option>
               </select>
               <button
                 onClick={fetchAnalytics}
@@ -342,7 +417,7 @@ const AdminAnalytics = () => {
           </div>
 
           {/* Revenue Chart */}
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold mb-4">Revenue Overview</h2>
             <ResponsiveContainer width="100%" height={400}>
               <AreaChart data={analytics.dailySales}>
@@ -395,7 +470,7 @@ const AdminAnalytics = () => {
           </div>
 
           {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Top Selling Products */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h2 className="text-lg font-semibold mb-4">
@@ -457,9 +532,19 @@ const AdminAnalytics = () => {
           </div>
 
           {/* Daily Sales Table */}
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-lg font-semibold">Daily Sales Breakdown</h2>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Daily Sales Breakdown</h2>
+                <p className="text-sm text-slate-500">
+                  A detailed view of revenue, orders, and customer activity.
+                </p>
+              </div>
+              <div className="rounded-full bg-slate-100 px-3 py-2 text-sm text-slate-600">
+                {viewMode === "details"
+                  ? "Detailed analytics"
+                  : "Snapshot view"}
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -483,7 +568,7 @@ const AdminAnalytics = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {analytics.dailySales.slice(-7).map((day, index) => (
+                  {paginatedDailySales.map((day, index) => (
                     <tr key={index} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {day.name}
@@ -507,6 +592,54 @@ const AdminAnalytics = () => {
                 </tbody>
               </table>
             </div>
+            {totalDailyPages > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-6 py-4">
+                <div className="text-sm text-slate-500">
+                  Showing {paginatedDailySales.length} of{" "}
+                  {analytics.dailySales.length} entries
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() =>
+                      setDailyPage((page) => Math.max(1, page - 1))
+                    }
+                    disabled={dailyPage === 1}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Previous
+                  </button>
+                  {getVisibleDailyPages().map((page, index) =>
+                    page === "ellipsis" ? (
+                      <span
+                        key={`ellipsis-${index}`}
+                        className="px-2 text-slate-400"
+                      >
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setDailyPage(page)}
+                        className={`rounded-lg px-3 py-2 text-sm transition ${dailyPage === page ? "bg-primary-600 text-white shadow-sm" : "border border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"}`}
+                      >
+                        {page}
+                      </button>
+                    ),
+                  )}
+                  <button
+                    onClick={() =>
+                      setDailyPage((page) =>
+                        Math.min(totalDailyPages, page + 1),
+                      )
+                    }
+                    disabled={dailyPage === totalDailyPages}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import AdminSidebar from "./AdminSidebar";
 import adminService from "../../services/adminService";
+import { useAuth } from "../../context/AuthContext";
 import {
   FiUsers,
   FiSearch,
@@ -17,6 +18,7 @@ import {
 import toast from "react-hot-toast";
 
 const AdminUsers = () => {
+  const { user: authUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -31,13 +33,15 @@ const AdminUsers = () => {
     users: 0,
     activeToday: 0,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(8);
+  const isSuperAdmin = authUser?.role === "super-admin";
 
   useEffect(() => {
     fetchUsers();
   }, []);
 
   useEffect(() => {
-    // Filter users based on search and role
     let filtered = users;
 
     if (searchTerm) {
@@ -53,6 +57,7 @@ const AdminUsers = () => {
     }
 
     setFilteredUsers(filtered);
+    setCurrentPage(1);
   }, [searchTerm, roleFilter, users]);
 
   const fetchUsers = async () => {
@@ -91,6 +96,11 @@ const AdminUsers = () => {
   };
 
   const handleRoleChange = async (userId, newRole) => {
+    if (!isSuperAdmin && newRole === "admin") {
+      toast.error("Only super admins can promote users to admin.");
+      return;
+    }
+
     try {
       setUpdatingRole(true);
       await adminService.updateUserRole(userId, newRole);
@@ -116,10 +126,27 @@ const AdminUsers = () => {
   };
 
   const handleToggleUserStatus = async (userId, currentStatus) => {
-    // This would need a backend endpoint to disable/enable users
-    toast.success(
-      `Feature coming soon: ${currentStatus ? "Disable" : "Enable"} user`,
-    );
+    try {
+      const nextStatus = currentStatus ? "active" : "disabled";
+      await adminService.updateUserStatus?.(userId, nextStatus);
+
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId
+            ? { ...user, isActive: nextStatus === "active" }
+            : user,
+        ),
+      );
+
+      toast.success(
+        `User ${nextStatus === "active" ? "enabled" : "disabled"} successfully`,
+      );
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to update user status",
+      );
+    }
   };
 
   const formatDate = (dateString) => {
@@ -130,6 +157,43 @@ const AdminUsers = () => {
       day: "numeric",
     });
   };
+
+  const getVisiblePages = () => {
+    const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, "ellipsis", totalPages];
+    }
+
+    if (currentPage >= totalPages - 2) {
+      return [
+        1,
+        "ellipsis",
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+
+    return [
+      1,
+      "ellipsis",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "ellipsis",
+      totalPages,
+    ];
+  };
+
+  const paginatedUsers = filteredUsers.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   const getInitials = (name) => {
     return (
@@ -295,8 +359,8 @@ const AdminUsers = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredUsers.length > 0 ? (
-                    filteredUsers.map((user) => (
+                  {paginatedUsers.length > 0 ? (
+                    paginatedUsers.map((user) => (
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -358,11 +422,14 @@ const AdminUsers = () => {
                           </button>
                           <button
                             onClick={() =>
-                              handleToggleUserStatus(user.id, true)
+                              handleToggleUserStatus(
+                                user.id,
+                                user.isActive !== false,
+                              )
                             }
                             className="text-red-600 hover:text-red-900"
                           >
-                            Disable
+                            {user.isActive === false ? "Enable" : "Disable"}
                           </button>
                         </td>
                       </tr>
@@ -382,25 +449,51 @@ const AdminUsers = () => {
             </div>
           </div>
 
-          {/* Pagination */}
-          <div className="mt-6 flex items-center justify-between">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
             <div className="text-sm text-gray-500">
-              Showing {filteredUsers.length} of {users.length} users
+              Showing {paginatedUsers.length} of {filteredUsers.length} users
             </div>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Previous
               </button>
-              <button className="px-3 py-1 bg-primary-600 text-white rounded">
-                1
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
-                2
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
-                3
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
+              {getVisiblePages().map((page, index) =>
+                page === "ellipsis" ? (
+                  <span
+                    key={`ellipsis-${index}`}
+                    className="px-2 text-slate-400"
+                  >
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`rounded-lg px-3 py-2 text-sm transition ${currentPage === page ? "bg-primary-600 text-white shadow-sm" : "border border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"}`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+              <button
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.min(
+                      Math.max(1, Math.ceil(filteredUsers.length / pageSize)),
+                      page + 1,
+                    ),
+                  )
+                }
+                disabled={
+                  currentPage >=
+                  Math.max(1, Math.ceil(filteredUsers.length / pageSize))
+                }
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+              >
                 Next
               </button>
             </div>

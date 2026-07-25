@@ -26,6 +26,7 @@ exports.getUsers = async (req, res) => {
         address: userData.address,
         role: userData.role,
         isVerified: userData.isVerified,
+        isActive: userData.isActive !== false,
         createdAt: userData.createdAt,
         updatedAt: userData.updatedAt,
         orderCount: orders.length,
@@ -201,6 +202,64 @@ exports.updateSettings = async (req, res) => {
   } catch (error) {
     console.error('Update settings error:', error);
     res.status(500).json({ message: 'Failed to update settings' });
+  }
+};
+
+exports.updateUserRole = async (req, res) => {
+  try {
+    const targetUser = await User.findByPk(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (req.user.role !== 'super-admin') {
+      return res.status(403).json({ message: 'Only super-admin can change user roles.' });
+    }
+
+    const { role } = req.body;
+    if (!role || !['user', 'admin', 'super-admin'].includes(role)) {
+      return res.status(400).json({ message: 'Invalid role provided.' });
+    }
+
+    if (targetUser.role === 'super-admin' && role !== 'super-admin') {
+      return res.status(400).json({ message: 'Super-admin role cannot be downgraded.' });
+    }
+
+    targetUser.role = role;
+    await targetUser.save();
+
+    res.json({ success: true, message: 'User role updated successfully', user: targetUser });
+  } catch (error) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ message: error.message || 'Failed to update user role' });
+  }
+};
+
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const targetUser = await User.findByPk(req.params.id);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const canManageUser = req.user.role === 'super-admin' || (req.user.role === 'admin' && targetUser.role === 'user');
+    if (!canManageUser) {
+      return res.status(403).json({ message: 'You are not permitted to change this user status.' });
+    }
+
+    const { status } = req.body;
+    const normalizedStatus = typeof status === 'string' ? status.toLowerCase() : '';
+    if (!['active', 'disabled'].includes(normalizedStatus)) {
+      return res.status(400).json({ message: 'Invalid status provided.' });
+    }
+
+    targetUser.isActive = normalizedStatus === 'active';
+    await targetUser.save();
+
+    res.json({ success: true, message: 'User status updated successfully', user: targetUser });
+  } catch (error) {
+    console.error('Update user status error:', error);
+    res.status(500).json({ message: error.message || 'Failed to update user status' });
   }
 };
 

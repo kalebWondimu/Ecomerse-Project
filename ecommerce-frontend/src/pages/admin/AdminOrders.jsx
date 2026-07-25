@@ -25,6 +25,8 @@ const AdminOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(8);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -127,25 +129,63 @@ const AdminOrders = () => {
     return `$${parseFloat(amount || 0).toFixed(2)}`;
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateFilter]);
+
+  const getDateRange = (value) => {
+    const now = new Date();
+    const start = new Date(now);
+    switch (value) {
+      case "today":
+        start.setHours(0, 0, 0, 0);
+        return start;
+      case "week":
+        start.setDate(now.getDate() - 6);
+        return start;
+      case "month":
+        start.setMonth(now.getMonth() - 1);
+        return start;
+      case "year":
+        start.setFullYear(now.getFullYear() - 1);
+        return start;
+      default:
+        return null;
+    }
+  };
+
   const filteredOrders = orders.filter((order) => {
-    // Search filter
     const matchesSearch =
       order.id?.toString().includes(searchTerm) ||
       order.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      order.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.user?.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.User?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.User?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Status filter
     const matchesStatus =
       statusFilter === "all" ||
       order.status?.toLowerCase() === statusFilter.toLowerCase();
 
-    // Date filter (simplified - you can enhance this)
-    const matchesDate = dateFilter === "all" || true;
+    const matchesDate = (() => {
+      if (dateFilter === "all") return true;
+      const start = getDateRange(dateFilter);
+      if (!start) return true;
+      const orderDate = new Date(order.createdAt);
+      return orderDate >= start;
+    })();
 
     return matchesSearch && matchesStatus && matchesDate;
   });
 
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+
   const getStatusOptions = (currentStatus) => {
+    const current = currentStatus?.toLowerCase();
     const allStatuses = [
       "pending",
       "processing",
@@ -153,7 +193,48 @@ const AdminOrders = () => {
       "delivered",
       "cancelled",
     ];
-    return allStatuses.filter((s) => s !== currentStatus?.toLowerCase());
+    const allowedTransitions = {
+      pending: ["processing", "cancelled"],
+      processing: ["shipped", "cancelled"],
+      shipped: ["delivered"],
+      delivered: [],
+      cancelled: [],
+    };
+
+    return allStatuses.filter(
+      (s) => s !== current && allowedTransitions[current]?.includes(s),
+    );
+  };
+
+  const getVisiblePages = () => {
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (currentPage <= 3) {
+      return [1, 2, 3, 4, "ellipsis", totalPages];
+    }
+
+    if (currentPage >= totalPages - 2) {
+      return [
+        1,
+        "ellipsis",
+        totalPages - 3,
+        totalPages - 2,
+        totalPages - 1,
+        totalPages,
+      ];
+    }
+
+    return [
+      1,
+      "ellipsis",
+      currentPage - 1,
+      currentPage,
+      currentPage + 1,
+      "ellipsis",
+      totalPages,
+    ];
   };
 
   const exportOrders = () => {
@@ -300,8 +381,8 @@ const AdminOrders = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {filteredOrders.length > 0 ? (
-                    filteredOrders.map((order) => (
+                  {paginatedOrders.length > 0 ? (
+                    paginatedOrders.map((order) => (
                       <tr key={order.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           #{order.id}
@@ -375,29 +456,52 @@ const AdminOrders = () => {
             </div>
           </div>
 
-          {/* Pagination */}
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-gray-500">
-              Showing {filteredOrders.length} of {orders.length} orders
+          {totalPages > 1 && (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <div className="text-sm text-gray-500">
+                Showing {Math.min(pageSize, filteredOrders.length)} of{" "}
+                {filteredOrders.length} orders
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                {getVisiblePages().map((page, index) =>
+                  page === "ellipsis" ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 text-slate-400"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`rounded-lg px-3 py-2 text-sm transition ${currentPage === page ? "bg-primary-600 text-white shadow-sm" : "border border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"}`}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() =>
+                    setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
-                Previous
-              </button>
-              <button className="px-3 py-1 bg-primary-600 text-white rounded">
-                1
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
-                2
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
-                3
-              </button>
-              <button className="px-3 py-1 border rounded hover:bg-gray-50">
-                Next
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -500,13 +604,23 @@ const AdminOrders = () => {
                   onChange={(e) =>
                     handleStatusUpdate(selectedOrder.id, e.target.value)
                   }
+                  disabled={getStatusOptions(selectedOrder.status).length === 0}
                   className="input-field flex-1"
                 >
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
+                  {getStatusOptions(selectedOrder.status).length > 0 ? (
+                    getStatusOptions(selectedOrder.status).map((status) => (
+                      <option key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    ))
+                  ) : (
+                    <option value={selectedOrder.status || "pending"}>
+                      {selectedOrder.status
+                        ? selectedOrder.status.charAt(0).toUpperCase() +
+                          selectedOrder.status.slice(1)
+                        : "Pending"}
+                    </option>
+                  )}
                 </select>
                 <button
                   onClick={() => setShowDetailsModal(false)}

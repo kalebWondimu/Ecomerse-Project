@@ -127,13 +127,33 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    const previousStatus = order.status;
-    order.status = req.body.status;
+    const previousStatus = order.status?.toLowerCase();
+    const nextStatus = req.body.status?.toLowerCase();
+    const allowedTransitions = {
+      pending: ['processing', 'cancelled'],
+      processing: ['shipped', 'cancelled'],
+      shipped: ['delivered'],
+      delivered: [],
+      cancelled: [],
+    };
+
+    if (nextStatus && !allowedTransitions[previousStatus]?.includes(nextStatus)) {
+      return res.status(400).json({ message: 'This status change is not allowed for the current order state.' });
+    }
+
+    const previousStatusText = previousStatus || 'pending';
+    const nextStatusText = nextStatus || previousStatusText;
+
+    if (nextStatusText === 'cancelled' && previousStatusText === 'delivered') {
+      return res.status(400).json({ message: 'A delivered order cannot be cancelled.' });
+    }
+
+    order.status = nextStatusText;
     await order.save();
 
     if (
-      req.body.status?.toLowerCase() === 'delivered' &&
-      previousStatus?.toLowerCase() !== 'delivered'
+      nextStatus === 'delivered' &&
+      previousStatus !== 'delivered'
     ) {
       try {
         if (order.User && order.User.email) {
@@ -183,9 +203,8 @@ exports.cancelOrder = async (req, res) => {
       return res.status(403).json({ message: 'You are not authorized to cancel this order' });
     }
     
-    // Check if order can be cancelled (only pending/processing orders)
     if (!['pending', 'processing'].includes(order.status?.toLowerCase())) {
-      return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
+      return res.status(400).json({ message: 'Only pending or processing orders can be cancelled.' });
     }
     
     // Restore stock for all items in the order

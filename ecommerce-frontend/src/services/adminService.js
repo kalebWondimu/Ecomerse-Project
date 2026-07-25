@@ -94,6 +94,16 @@ const adminService = {
     }
   },
 
+  updateUserStatus: async (id, status) => {
+    try {
+      const response = await api.put(`/admin/users/${id}/status`, { status });
+      return response.data;
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      throw error;
+    }
+  },
+
   deleteUser: async (id) => {
     try {
       const response = await api.delete(`/admin/users/${id}`);
