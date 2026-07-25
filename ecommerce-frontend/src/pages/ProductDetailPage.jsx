@@ -30,6 +30,9 @@ const ProductDetailPage = () => {
 
   const { addToCart } = useCart();
   const { user, isAuthenticated } = useAuth();
+  const reviewCount = Number(
+    product?.reviewCount ?? product?.ratings?.length ?? 0,
+  );
 
   const favoritesKey = user ? `favorites_${user.id}` : "favorites_guest";
 
@@ -264,7 +267,9 @@ const ProductDetailPage = () => {
               ))}
             </div>
             <span className="text-gray-500 ml-2">
-              ({product.ratings?.length || 0} reviews)
+              {reviewCount === 0
+                ? "No reviews yet"
+                : `Based on ${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`}
             </span>
           </div>
 

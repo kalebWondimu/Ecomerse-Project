@@ -1,5 +1,53 @@
-const { Product } = require('../models');
-const { Op } = require('sequelize');
+const { Product, Review } = require('../models');
+const { Op, Sequelize } = require('sequelize');
+const { sequelize } = require('../config/postgres');
+
+const attachReviewStats = async (products) => {
+  if (!Array.isArray(products) || products.length === 0) {
+    return [];
+  }
+
+  const productIds = products.map((product) => product.id).filter(Boolean);
+  if (productIds.length === 0) {
+    return products.map((product) => ({
+      ...(product.toJSON ? product.toJSON() : product),
+      reviewCount: 0,
+      averageRating: Number(product.averageRating || 0),
+    }));
+  }
+
+  const reviewStats = await Review.findAll({
+    attributes: [
+      'productId',
+      [Sequelize.fn('COUNT', Sequelize.col('id')), 'reviewCount'],
+      [Sequelize.fn('AVG', Sequelize.col('rating')), 'averageRating'],
+    ],
+    where: { productId: productIds },
+    group: ['productId'],
+    raw: true,
+  });
+
+  const statsByProductId = Object.fromEntries(
+    reviewStats.map((stat) => [
+      stat.productId,
+      {
+        reviewCount: Number(stat.reviewCount || 0),
+        averageRating: stat.averageRating ? Number(stat.averageRating) : 0,
+      },
+    ])
+  );
+
+  return products.map((product) => {
+    const plainProduct = product.toJSON ? product.toJSON() : product;
+    const stats = statsByProductId[plainProduct.id] || { reviewCount: 0, averageRating: 0 };
+
+    return {
+      ...plainProduct,
+      reviewCount: stats.reviewCount,
+      averageRating: Number(plainProduct.averageRating ?? stats.averageRating ?? 0),
+    };
+  });
+};
 
 exports.createProduct = async (req, res) => {
   try {
@@ -58,9 +106,10 @@ exports.getProducts = async (req, res) => {
     
     const totalCount = await Product.count({ where });
     const totalPages = Math.max(1, Math.ceil(totalCount / requestedLimit));
+    const productsWithStats = await attachReviewStats(products);
     
     res.json({
-      products,
+      products: productsWithStats,
       totalCount,
       currentPage: requestedPage,
       totalPages
@@ -80,7 +129,8 @@ exports.searchProducts = async (req, res) => {
         name: { [Op.iLike]: `%${q}%` } 
       },
     });
-    res.json(products);
+    const productsWithStats = await attachReviewStats(products);
+    res.json(productsWithStats);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -90,7 +140,8 @@ exports.getProductById = async (req, res) => {
   try {
     const product = await Product.findByPk(req.params.id);
     if (product) {
-      res.json(product);
+      const productsWithStats = await attachReviewStats([product]);
+      res.json(productsWithStats[0]);
     } else {
       res.status(404).json({ message: 'Product not found' });
     }

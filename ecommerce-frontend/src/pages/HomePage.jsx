@@ -27,7 +27,6 @@ const HomePage = () => {
   const welcomeMessage = location.state?.welcomeMessage;
   const [featured, setFeatured] = useState([]);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
-  const [liveUsers, setLiveUsers] = useState(128);
 
   useEffect(() => {
     const loadFeatured = async () => {
@@ -55,14 +54,6 @@ const HomePage = () => {
     };
 
     loadFeatured();
-  }, []);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setLiveUsers((prev) => prev + 1);
-    }, 7000);
-
-    return () => window.clearInterval(interval);
   }, []);
 
   return (
@@ -99,7 +90,7 @@ const HomePage = () => {
             </div>
             <div className="mb-6 flex flex-wrap items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-sm text-white/90 backdrop-blur-sm">
               <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
-              <span>{liveUsers}+ shoppers are browsing right now</span>
+              <span>Trusted by shoppers across Ethiopia and beyond</span>
             </div>
             <div className="flex flex-col gap-4 sm:flex-row">
               <Link

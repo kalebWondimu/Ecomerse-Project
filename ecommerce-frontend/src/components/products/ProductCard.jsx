@@ -10,7 +10,9 @@ const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
   const rating = Number(product.averageRating || 0);
-  const reviewCount = product.reviewCount || product.ratings?.length || 0;
+  const reviewCount = Number(
+    product.reviewCount ?? product.ratings?.length ?? 0,
+  );
   const isTopRated = rating >= 4.5 && reviewCount > 0;
 
   const handleAddToCart = async (e) => {
