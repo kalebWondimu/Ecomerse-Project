@@ -55,36 +55,50 @@ const ProductsPage = () => {
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
-      const params = {
-        category: selectedCategory !== "all" ? selectedCategory : undefined,
-        sort: sortBy,
-        search: searchTerm || undefined,
-        page,
-        limit: pageSize,
-      };
+      const params = {};
+      if (selectedCategory && selectedCategory !== "all") {
+        params.category = selectedCategory;
+      }
+      params.sort = sortBy;
+      if (searchTerm && searchTerm.trim()) {
+        params.search = searchTerm.trim();
+      }
+      params.page = page;
+      params.limit = pageSize;
       const data = await productService.getProducts(params);
-      const payload =
-        data && Array.isArray(data.products)
-          ? data
-          : { products: [], totalCount: 0, currentPage: page, totalPages: 1 };
+      let payload = {
+        products: [],
+        totalCount: 0,
+        currentPage: page,
+        totalPages: 1,
+      };
+
+      if (data) {
+        if (Array.isArray(data.products)) {
+          payload = data;
+        } else if (Array.isArray(data)) {
+          payload = {
+            products: data,
+            totalCount: data.length,
+            currentPage: page,
+            totalPages: 1,
+          };
+        }
+      }
+
       const nextProducts = Array.isArray(payload.products)
         ? payload.products
         : [];
       setProducts(nextProducts);
-      setTotalCount(Number(payload.totalCount || nextProducts.length || 0));
-      setTotalPages(
-        Math.max(
-          1,
-          Number(
-            payload.totalPages ||
-              Math.ceil(nextProducts.length / pageSize) ||
-              1,
-          ),
-        ),
-      );
+      setTotalCount(Number(payload.totalCount || 0));
+      setTotalPages(Number(payload.totalPages || 1));
       setCurrentPage(Number(payload.currentPage || page));
     } catch (error) {
+      console.error("Error loading products:", error);
       toast.error("Failed to load products");
+      setProducts([]);
+      setTotalCount(0);
+      setTotalPages(1);
     } finally {
       setLoading(false);
     }
@@ -125,6 +139,7 @@ const ProductsPage = () => {
   const handleCategoryChange = (value) => {
     const normalized = normalizeCategory(value);
     setSelectedCategory(normalized);
+    setCurrentPage(1);
     const params = new URLSearchParams(searchParams);
     if (normalized === "all") {
       params.delete("category");
@@ -195,7 +210,10 @@ const ProductsPage = () => {
                 type="text"
                 placeholder="Search products..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="input-field pl-10 pr-24 w-full"
               />
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -219,7 +237,10 @@ const ProductsPage = () => {
           {/* Sort Dropdown */}
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
+            onChange={(e) => {
+              setSortBy(e.target.value);
+              setCurrentPage(1);
+            }}
             className="input-field md:w-48"
           >
             <option value="newest">Newest First</option>

@@ -23,7 +23,7 @@ exports.getProducts = async (req, res) => {
     }
     
     if (category && category !== 'all' && category !== 'All Categories') {
-      where.category = category;
+      where.category = { [Op.iLike]: category };
     }
     
     if (minPrice || maxPrice) {

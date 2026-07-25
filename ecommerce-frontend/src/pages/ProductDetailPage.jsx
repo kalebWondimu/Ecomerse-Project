@@ -115,8 +115,13 @@ const ProductDetailPage = () => {
         category: data.category,
         limit: 4,
       });
-      setRelatedProducts(related.filter((p) => p.id !== parseInt(id)));
+      // Extract products array from the response object
+      const relatedArray = Array.isArray(related)
+        ? related
+        : related?.products || [];
+      setRelatedProducts(relatedArray.filter((p) => p.id !== parseInt(id)));
     } catch (error) {
+      console.error("Error loading product details:", error);
       toast.error("Failed to load product details");
       navigate("/products");
     } finally {

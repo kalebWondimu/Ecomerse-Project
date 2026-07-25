@@ -356,9 +356,7 @@ const OrderConfirmationPage = () => {
           </div>
 
           <div className="bg-gray-50 rounded-lg p-4">
-            <p className="text-gray-700">
-              {getStatusDescription(order.status)}
-            </p>
+            <p className="text-gray-700">{getStatusDescription(order)}</p>
           </div>
         </div>
 

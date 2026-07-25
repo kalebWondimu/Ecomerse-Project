@@ -3,7 +3,12 @@ import api from './api';
 const productService = {
   getProducts: async (params = {}) => {
     try {
-      const response = await api.get('/products', { params });
+      // Filter out undefined/null/empty values from params to prevent API issues
+      const cleanParams = Object.fromEntries(
+        Object.entries(params).filter(([, value]) => value !== undefined && value !== null && value !== '')
+      );
+      
+      const response = await api.get('/products', { params: cleanParams });
       const payload = response.data;
 
       if (payload && Array.isArray(payload.products)) {
