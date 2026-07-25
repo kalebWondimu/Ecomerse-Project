@@ -19,10 +19,18 @@ import {
   FiDownload,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../context/StoreSettingsContext";
+import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency";
 
 const OrderConfirmationPage = () => {
   const { orderId } = useParams();
   const { isAuthenticated } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -178,7 +186,7 @@ const OrderConfirmationPage = () => {
       `Transaction ID: ${order.transactionId || "N/A"}`,
       `Payment status: ${order.paymentStatus || "N/A"}`,
       `Order status: ${order.status || "N/A"}`,
-      `Amount: $${(order.totalAmount || 0).toFixed(2)}`,
+      `Amount: ${formatCurrency(order.totalAmount || 0, displayCurrency)}`,
       `Payment method: ${
         order.paymentMethod === "card" ? "Credit Card" : order.paymentMethod
       }`,
@@ -369,7 +377,13 @@ const OrderConfirmationPage = () => {
             {order.items && order.items.length > 0 ? (
               order.items.map((item, index) => {
                 const product = products[item.productId];
-                const itemTotal = (item.price * item.quantity).toFixed(2);
+                const itemTotal = (
+                  convertCurrency(
+                    item.price,
+                    item.currency || displayCurrency,
+                    displayCurrency,
+                  ) * item.quantity
+                ).toFixed(2);
 
                 return (
                   <div
@@ -400,13 +414,20 @@ const OrderConfirmationPage = () => {
                             {product?.name || `Product #${item.productId}`}
                           </h3>
                           <p className="text-sm text-gray-500 mt-1">
-                            Quantity: {item.quantity} × $
-                            {item.price?.toFixed(2)}
+                            Quantity: {item.quantity} ×{" "}
+                            {formatCurrency(
+                              convertCurrency(
+                                item.price,
+                                item.currency || displayCurrency,
+                                displayCurrency,
+                              ),
+                              displayCurrency,
+                            )}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-lg font-bold text-primary-600">
-                            ${itemTotal}
+                            {formatCurrency(itemTotal, displayCurrency)}
                           </p>
                         </div>
                       </div>
@@ -428,7 +449,7 @@ const OrderConfirmationPage = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">
-                    ${(order.totalAmount || 0).toFixed(2)}
+                    {formatCurrency(order.totalAmount || 0, displayCurrency)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
@@ -442,7 +463,7 @@ const OrderConfirmationPage = () => {
                 <div className="flex justify-between font-bold text-lg pt-3 border-t">
                   <span>Total</span>
                   <span className="text-primary-600">
-                    ${(order.totalAmount || 0).toFixed(2)}
+                    {formatCurrency(order.totalAmount || 0, displayCurrency)}
                   </span>
                 </div>
               </div>

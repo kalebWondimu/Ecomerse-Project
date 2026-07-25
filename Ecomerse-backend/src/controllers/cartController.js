@@ -1,5 +1,14 @@
-const { Product } = require('../models');
+const { Product, StoreSettings } = require('../models');
 const { sequelize } = require('../config/postgres');
+
+const getStoreCurrency = async () => {
+  try {
+    const settings = await StoreSettings.findOne();
+    return settings?.currency || 'USD';
+  } catch (error) {
+    return 'USD';
+  }
+};
 
 exports.getCart = async (req, res) => {
   try {
@@ -43,6 +52,8 @@ exports.getCart = async (req, res) => {
       }
     }
    
+    const storeCurrency = await getStoreCurrency();
+
     // Build response with full product details
     const populatedItems = [];
     let calculatedTotal = 0;
@@ -67,6 +78,7 @@ exports.getCart = async (req, res) => {
             quantity: item.quantity,
             name: product.name,
             price: product.price,
+            currency: product.currency || storeCurrency,
             stock: product.stock,
             category: product.category || 'Uncategorized',
             image: productImage
@@ -180,6 +192,7 @@ exports.addItem = async (req, res) => {
           quantity: item.quantity,
           name: prod.name,
           price: prod.price,
+          currency: prod.currency || storeCurrency,
           stock: prod.stock,
           category: prod.category || 'Uncategorized',
           image: prod.images && prod.images.length > 0 ? prod.images[0] : null
@@ -192,6 +205,7 @@ exports.addItem = async (req, res) => {
       userId: cartData.userId,
       items: responseItems,
       totalPrice: totalPrice,
+      currency: storeCurrency,
       createdAt: cartData.createdAt,
       updatedAt: new Date().toISOString()
     };

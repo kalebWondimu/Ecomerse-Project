@@ -1,18 +1,29 @@
-const { Product, Review } = require('../models');
+const { Product, Review, StoreSettings } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 const { sequelize } = require('../config/postgres');
+
+const getStoreCurrency = async () => {
+  try {
+    const settings = await StoreSettings.findOne();
+    return settings?.currency || 'USD';
+  } catch (error) {
+    return 'USD';
+  }
+};
 
 const attachReviewStats = async (products) => {
   if (!Array.isArray(products) || products.length === 0) {
     return [];
   }
 
+  const storeCurrency = await getStoreCurrency();
   const productIds = products.map((product) => product.id).filter(Boolean);
   if (productIds.length === 0) {
     return products.map((product) => ({
       ...(product.toJSON ? product.toJSON() : product),
       reviewCount: 0,
       averageRating: Number(product.averageRating || 0),
+      currency: product.currency || storeCurrency,
     }));
   }
 
@@ -45,6 +56,7 @@ const attachReviewStats = async (products) => {
       ...plainProduct,
       reviewCount: stats.reviewCount,
       averageRating: Number(plainProduct.averageRating ?? stats.averageRating ?? 0),
+      currency: plainProduct.currency || storeCurrency,
     };
   });
 };

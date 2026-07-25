@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, StoreSettings } = require('../models');
 const crypto = require('crypto');
 const emailService = require('../services/emailService');
 const { Op } = require('sequelize');
@@ -8,13 +8,30 @@ const generateToken = (id, expires = '1h', type = 'auth') => {
   return jwt.sign({ id, type }, process.env.JWT_SECRET, { expiresIn: expires });
 };
 
+const getSecuritySettings = async () => {
+  try {
+    const settings = await StoreSettings.findOne();
+    return settings?.securitySettings || {};
+  } catch (error) {
+    console.error('Failed to load security settings:', error);
+    return {};
+  }
+};
+
 const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 const isDev = process.env.NODE_ENV !== 'production';
 
 
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body;   
+    const { name, email, password, phone } = req.body;
+    const securitySettings = await getSecuritySettings();
+    const minPasswordLength = Math.max(6, Number(securitySettings.passwordMinLength || 8));
+
+    if (!password || password.length < minPasswordLength) {
+      return res.status(400).json({ message: `Password must be at least ${minPasswordLength} characters` });
+    }
+
     const userExists = await User.findOne({ where: { email } });
     if (userExists) {
       return res.status(400).json({ message: 'User already exists' });
@@ -61,10 +78,30 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const securitySettings = await getSecuritySettings();
     const user = await User.findOne({ where: { email } });
-    
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    const lockoutMinutes = Math.max(1, Number(securitySettings.sessionTimeout || 30));
+    const maxAttempts = Math.max(1, Number(securitySettings.maxLoginAttempts || 5));
+
+    if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+      return res.status(403).json({ message: `Account locked. Try again after ${lockoutMinutes} minutes.` });
+    }
+
     if (user && (await user.matchPassword(password))) {
-      const authToken = generateToken(user.id, '1h', 'auth');
+      user.failedLoginAttempts = 0;
+      user.lockedUntil = null;
+      await user.save();
+
+      if (securitySettings.requireEmailVerification && !user.isVerified) {
+        return res.status(403).json({ message: 'Please verify your email before logging in.' });
+      }
+
+      const authToken = generateToken(user.id, `${lockoutMinutes}m`, 'auth');
       const verifyToken = generateToken(user.id, '1d', 'verify');
       
       res.json({
@@ -77,6 +114,11 @@ exports.login = async (req, res) => {
         verifyToken,
       });
     } else {
+      user.failedLoginAttempts = Number(user.failedLoginAttempts || 0) + 1;
+      if (user.failedLoginAttempts >= maxAttempts) {
+        user.lockedUntil = new Date(Date.now() + lockoutMinutes * 60 * 1000);
+      }
+      await user.save();
       res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
@@ -132,13 +174,15 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token } = req.params;
     const { password } = req.body;
+    const securitySettings = await getSecuritySettings();
+    const minPasswordLength = Math.max(6, Number(securitySettings.passwordMinLength || 8));
     
     if (!token) {
       return res.status(400).json({ message: 'No token provided' });
     }
     
-    if (!password || password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    if (!password || password.length < minPasswordLength) {
+      return res.status(400).json({ message: `Password must be at least ${minPasswordLength} characters` });
     }
 
     let user;

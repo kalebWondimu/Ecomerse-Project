@@ -17,9 +17,17 @@ import {
   FiShoppingBag,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../context/StoreSettingsContext";
+import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency";
 
 const OrdersPage = () => {
   const { isAuthenticated } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState({});
@@ -356,13 +364,28 @@ const OrdersPage = () => {
                                   <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                                     <span>Quantity: {item.quantity}</span>
                                     <span>
-                                      Price: ${item.price?.toFixed(2)}
+                                      Price:{" "}
+                                      {formatCurrency(
+                                        convertCurrency(
+                                          item.price,
+                                          item.currency || displayCurrency,
+                                          displayCurrency,
+                                        ),
+                                        displayCurrency,
+                                      )}
                                     </span>
                                   </div>
                                 </div>
                                 <div className="text-right">
                                   <div className="font-bold text-primary-600">
-                                    ${(item.price * item.quantity).toFixed(2)}
+                                    {formatCurrency(
+                                      convertCurrency(
+                                        item.price,
+                                        item.currency || displayCurrency,
+                                        displayCurrency,
+                                      ) * item.quantity,
+                                      displayCurrency,
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -375,7 +398,13 @@ const OrdersPage = () => {
                           <div className="space-y-1">
                             <div className="flex items-center gap-4 text-sm text-gray-500">
                               <span>
-                                Subtotal: ${(order.totalAmount || 0).toFixed(2)}
+                                Subtotal:{" "}
+                                {formatCurrency(
+                                  order.totalAmount || 0,
+                                  normalizeCurrencyCode(
+                                    storeSettings?.currency,
+                                  ),
+                                )}
                               </span>
                               <span>•</span>
                               <span>Shipping: Calculated at checkout</span>
@@ -393,7 +422,12 @@ const OrdersPage = () => {
                             <div className="text-lg font-bold text-gray-900">
                               Total:{" "}
                               <span className="text-primary-600">
-                                ${(order.totalAmount || 0).toFixed(2)}
+                                {formatCurrency(
+                                  order.totalAmount || 0,
+                                  normalizeCurrencyCode(
+                                    storeSettings?.currency,
+                                  ),
+                                )}
                               </span>
                             </div>
                             <Link

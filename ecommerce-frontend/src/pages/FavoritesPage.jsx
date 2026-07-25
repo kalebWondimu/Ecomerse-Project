@@ -2,9 +2,17 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../context/StoreSettingsContext";
+import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency";
 
 const FavoritesPage = () => {
   const { user } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
   const [favorites, setFavorites] = useState([]);
   const favoritesKey = user ? `favorites_${user.id}` : "favorites_guest";
 
@@ -96,7 +104,14 @@ const FavoritesPage = () => {
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <span className="text-2xl font-bold text-primary-600">
-                    ${product.price}
+                    {formatCurrency(
+                      convertCurrency(
+                        product.price,
+                        product.currency || displayCurrency,
+                        displayCurrency,
+                      ),
+                      displayCurrency,
+                    )}
                   </span>
                   <Link
                     to={`/products/${product.id}`}

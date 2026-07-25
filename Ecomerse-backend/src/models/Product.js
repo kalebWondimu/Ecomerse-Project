@@ -15,6 +15,11 @@ const Product = sequelize.define('Product', {
     allowNull: false, 
     defaultValue: 0 
   },
+  currency: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: 'USD'
+  },
   stock: { 
     type: DataTypes.INTEGER, 
     defaultValue: 0 

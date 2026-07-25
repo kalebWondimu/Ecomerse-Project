@@ -14,6 +14,12 @@ import {
   FiCreditCard,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../context/StoreSettingsContext";
+import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency";
 
 const CartPage = () => {
   const {
@@ -27,6 +33,8 @@ const CartPage = () => {
     initialized,
   } = useCart();
   const { isAuthenticated, loading: authLoading } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
   const navigate = useNavigate();
   const [updating, setUpdating] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -117,7 +125,14 @@ const CartPage = () => {
 
   // Calculate totals
   const subtotal = cart.items.reduce(
-    (total, item) => total + item.price * item.quantity,
+    (total, item) =>
+      total +
+      convertCurrency(
+        item.price,
+        item.currency || displayCurrency,
+        displayCurrency,
+      ) *
+        item.quantity,
     0,
   );
 
@@ -262,10 +277,17 @@ const CartPage = () => {
                     </div>
                     <div className="text-right">
                       <div className="text-lg font-bold text-primary-600">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatCurrency(
+                          item.price * item.quantity,
+                          normalizeCurrencyCode(storeSettings?.currency),
+                        )}
                       </div>
                       <div className="text-sm text-gray-500">
-                        ${item.price.toFixed(2)} each
+                        {formatCurrency(
+                          item.price,
+                          normalizeCurrencyCode(storeSettings?.currency),
+                        )}{" "}
+                        each
                       </div>
                     </div>
                   </div>
@@ -300,22 +322,42 @@ const CartPage = () => {
             <div className="space-y-3 mb-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    subtotal,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
                 <span className="font-medium">
-                  {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                  {shipping === 0
+                    ? "Free"
+                    : formatCurrency(
+                        shipping,
+                        normalizeCurrencyCode(storeSettings?.currency),
+                      )}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Tax (10%)</span>
-                <span className="font-medium">${tax.toFixed(2)}</span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    tax,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}
+                </span>
               </div>
               {shipping > 0 && (
                 <div className="bg-blue-50 text-blue-700 text-sm p-3 rounded-lg">
                   <FiTruck className="inline mr-1" />
-                  Add ${(100 - subtotal).toFixed(2)} more for free shipping
+                  Add{" "}
+                  {formatCurrency(
+                    100 - subtotal,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}{" "}
+                  more for free shipping
                 </div>
               )}
             </div>
@@ -324,7 +366,10 @@ const CartPage = () => {
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold">Total</span>
                 <span className="text-2xl font-bold text-primary-600">
-                  ${total.toFixed(2)}
+                  {formatCurrency(
+                    total,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}
                 </span>
               </div>
             </div>

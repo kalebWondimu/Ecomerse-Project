@@ -16,6 +16,8 @@ import {
   FiImage,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../../context/StoreSettingsContext";
+import { formatCurrency, normalizeCurrencyCode } from "../../utils/currency";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -45,10 +47,12 @@ const AdminProducts = () => {
     price: "",
     stock: "",
     category: "Electronics",
+    currency: normalizeCurrencyCode(storeSettings?.currency),
     images: [],
   });
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const { settings: storeSettings } = useStoreSettings();
 
   useEffect(() => {
     fetchProducts(1);
@@ -105,6 +109,8 @@ const AdminProducts = () => {
     });
   };
 
+  const currencyCode = normalizeCurrencyCode(storeSettings?.currency);
+
   const addImage = () => {
     if (imageUrl && imageUrl.trim()) {
       setFormData({
@@ -131,6 +137,7 @@ const AdminProducts = () => {
       price: "",
       stock: "",
       category: "Electronics",
+      currency: normalizeCurrencyCode(storeSettings?.currency),
       images: [],
     });
     setImageUrl("");
@@ -150,6 +157,9 @@ const AdminProducts = () => {
       price: product.price || "",
       stock: product.stock || "",
       category: product.category || "Electronics",
+      currency: normalizeCurrencyCode(
+        product.currency || storeSettings?.currency,
+      ),
       images: product.images || [],
     });
     setShowModal(true);
@@ -186,6 +196,9 @@ const AdminProducts = () => {
         ...formData,
         price: parseFloat(formData.price),
         stock: parseInt(formData.stock),
+        currency: normalizeCurrencyCode(
+          formData.currency || storeSettings?.currency,
+        ),
       };
 
       if (editingProduct) {
@@ -232,8 +245,8 @@ const AdminProducts = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return `$${parseFloat(amount || 0).toFixed(2)}`;
+  const formatDisplayCurrency = (amount) => {
+    return formatCurrency(amount, currencyCode);
   };
 
   const getVisiblePages = () => {
@@ -424,7 +437,7 @@ const AdminProducts = () => {
 
                     <div className="flex justify-between items-center mb-4">
                       <span className="text-2xl font-bold text-primary-600">
-                        {formatCurrency(product.price)}
+                        {formatDisplayCurrency(product.price)}
                       </span>
                       <span className="text-sm text-gray-500">
                         Stock: {product.stock}
@@ -575,6 +588,29 @@ const AdminProducts = () => {
                 </div>
 
                 {/* Category */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Currency
+                  </label>
+                  <select
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleInputChange}
+                    className="input-field"
+                  >
+                    <option value="USD">USD ($)</option>
+                    <option value="EUR">EUR (€)</option>
+                    <option value="GBP">GBP (£)</option>
+                    <option value="ETB">ETB (Br)</option>
+                    <option value="INR">INR (₹)</option>
+                    <option value="JPY">JPY (¥)</option>
+                    <option value="CAD">CAD (C$)</option>
+                    <option value="AUD">AUD (A$)</option>
+                    <option value="AED">AED (د.إ)</option>
+                    <option value="CHF">CHF</option>
+                  </select>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Category

@@ -16,6 +16,7 @@ import {
   FiShield,
 } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { normalizeCurrencyCode } from "../../utils/currency";
 
 const AdminSettings = () => {
   const [activeTab, setActiveTab] = useState("general");
@@ -432,13 +433,20 @@ const AdminSettings = () => {
                 </label>
                 <select
                   name="currency"
-                  value={settings.general.currency}
+                  value={normalizeCurrencyCode(settings.general.currency)}
                   onChange={handleGeneralChange}
                   className="input-field"
                 >
                   <option value="USD">USD ($)</option>
                   <option value="EUR">EUR (€)</option>
                   <option value="GBP">GBP (£)</option>
+                  <option value="ETB">ETB (Br)</option>
+                  <option value="INR">INR (₹)</option>
+                  <option value="JPY">JPY (¥)</option>
+                  <option value="CAD">CAD (C$)</option>
+                  <option value="AUD">AUD (A$)</option>
+                  <option value="AED">AED (د.إ)</option>
+                  <option value="CHF">CHF</option>
                 </select>
               </div>
               <div>
@@ -632,7 +640,9 @@ const AdminSettings = () => {
             </div>
 
             <div className="border-t border-gray-200 pt-6 space-y-6">
-              <h4 className="text-base font-medium">Email Template Customization</h4>
+              <h4 className="text-base font-medium">
+                Email Template Customization
+              </h4>
               <div className="grid grid-cols-1 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -829,7 +839,7 @@ const AdminSettings = () => {
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
-                        {admin.role === 'super-admin' ? 'Super Admin' : 'Admin'}
+                        {admin.role === "super-admin" ? "Super Admin" : "Admin"}
                       </span>
                       <button
                         onClick={() => handleEditAdmin(admin)}
@@ -839,7 +849,7 @@ const AdminSettings = () => {
                       </button>
                       <button
                         onClick={() => handleDeleteAdmin(admin.id)}
-                        disabled={admin.role === 'super-admin'}
+                        disabled={admin.role === "super-admin"}
                         className="px-3 py-1 text-sm bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Delete
@@ -1361,7 +1371,10 @@ const AdminSettings = () => {
                   type="password"
                   value={editingAdmin.password}
                   onChange={(e) =>
-                    setEditingAdmin({ ...editingAdmin, password: e.target.value })
+                    setEditingAdmin({
+                      ...editingAdmin,
+                      password: e.target.value,
+                    })
                   }
                   className="input-field"
                   placeholder="New password"

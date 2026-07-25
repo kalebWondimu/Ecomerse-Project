@@ -8,6 +8,11 @@ import paymentService from "../services/paymentService";
 import userService from "../services/userService";
 import toast from "react-hot-toast";
 import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency";
+import {
   FiTruck,
   FiCreditCard,
   FiCheckCircle,
@@ -24,6 +29,7 @@ const CheckoutPage = () => {
   const { cart, loading, clearCart } = useCart();
   const { user, isAuthenticated } = useAuth();
   const { settings: storeSettings } = useStoreSettings();
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
   const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(1);
@@ -194,7 +200,14 @@ const CheckoutPage = () => {
   const calculateSubtotal = () => {
     return (
       cart?.items.reduce(
-        (total, item) => total + item.price * item.quantity,
+        (total, item) =>
+          total +
+          convertCurrency(
+            item.price,
+            item.currency || displayCurrency,
+            displayCurrency,
+          ) *
+            item.quantity,
         0,
       ) || 0
     );
@@ -678,7 +691,10 @@ const CheckoutPage = () => {
                     </p>
                   </div>
                   <p className="font-medium">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    {formatCurrency(
+                      item.price * item.quantity,
+                      normalizeCurrencyCode(storeSettings?.currency),
+                    )}
                   </p>
                 </div>
               ))}
@@ -688,21 +704,41 @@ const CheckoutPage = () => {
             <div className="space-y-2 pt-4 border-t">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${subtotal.toFixed(2)}</span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    subtotal,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}
+                </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping</span>
                 <span className="font-medium">
-                  {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                  {shipping === 0
+                    ? "Free"
+                    : formatCurrency(
+                        shipping,
+                        normalizeCurrencyCode(storeSettings?.currency),
+                      )}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tax (10%)</span>
-                <span className="font-medium">${tax.toFixed(2)}</span>
+                <span className="font-medium">
+                  {formatCurrency(
+                    tax,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}
+                </span>
               </div>
               <div className="flex justify-between text-lg font-bold pt-2 border-t mt-2">
                 <span>Total</span>
-                <span className="text-primary-600">${total.toFixed(2)}</span>
+                <span className="text-primary-600">
+                  {formatCurrency(
+                    total,
+                    normalizeCurrencyCode(storeSettings?.currency),
+                  )}
+                </span>
               </div>
             </div>
 

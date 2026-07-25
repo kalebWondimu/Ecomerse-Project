@@ -17,6 +17,12 @@ import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import OptimizedImage from "../components/common/OptimizedImage";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../context/StoreSettingsContext";
+import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../utils/currency";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
@@ -30,6 +36,8 @@ const ProductDetailPage = () => {
 
   const { addToCart } = useCart();
   const { user, isAuthenticated } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
   const reviewCount = Number(
     product?.reviewCount ?? product?.ratings?.length ?? 0,
   );
@@ -276,7 +284,14 @@ const ProductDetailPage = () => {
           {/* Price */}
           <div className="mb-6">
             <span className="text-4xl font-bold text-primary-600">
-              ${product.price}
+              {formatCurrency(
+                convertCurrency(
+                  product.price,
+                  product.currency || displayCurrency,
+                  displayCurrency,
+                ),
+                displayCurrency,
+              )}
             </span>
           </div>
 

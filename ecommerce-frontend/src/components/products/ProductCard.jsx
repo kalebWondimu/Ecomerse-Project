@@ -5,11 +5,24 @@ import { useCart } from "../../context/CartContext";
 import { useAuth } from "../../context/AuthContext";
 import OptimizedImage from "../common/OptimizedImage";
 import toast from "react-hot-toast";
+import { useStoreSettings } from "../../context/StoreSettingsContext";
+import {
+  convertCurrency,
+  formatCurrency,
+  normalizeCurrencyCode,
+} from "../../utils/currency";
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
+  const { settings: storeSettings } = useStoreSettings();
   const rating = Number(product.averageRating || 0);
+  const displayCurrency = normalizeCurrencyCode(storeSettings?.currency);
+  const displayPrice = convertCurrency(
+    product.price,
+    product.currency || displayCurrency,
+    displayCurrency,
+  );
   const reviewCount = Number(
     product.reviewCount ?? product.ratings?.length ?? 0,
   );
@@ -100,7 +113,7 @@ const ProductCard = ({ product }) => {
 
         <div className="flex items-center justify-between">
           <span className="text-2xl font-bold text-primary-600">
-            ${product.price}
+            {formatCurrency(displayPrice, displayCurrency)}
           </span>
           <button
             onClick={handleAddToCart}
