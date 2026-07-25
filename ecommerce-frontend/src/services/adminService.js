@@ -2,9 +2,9 @@ import api from './api';
 
 const adminService = {
   
-  getDashboardStats: async () => {
+  getDashboardStats: async (params = {}) => {
     try {
-      const response = await api.get('/admin/stats');
+      const response = await api.get('/admin/stats', { params });
       return response.data;
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);

@@ -17,22 +17,28 @@ const AdminDashboard = () => {
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
+  const [orderPage, setOrderPage] = useState(1);
+  const [orderPagination, setOrderPagination] = useState(null);
 
   useEffect(() => {
     if (!isAdmin) {
       navigate("/");
       return;
     }
-    fetchDashboardData();
-  }, [isAdmin, navigate]);
+    fetchDashboardData(orderPage);
+  }, [isAdmin, navigate, orderPage]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (page = 1) => {
     try {
       setLoading(true);
-      const dashboardData = await adminService.getDashboardStats();
+      const dashboardData = await adminService.getDashboardStats({
+        page,
+        limit: 6,
+      });
       setStats(dashboardData.stats);
       setRecentOrders(dashboardData.recentOrders || []);
       setTopProducts(dashboardData.topProducts || []);
+      setOrderPagination(dashboardData.pagination || null);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast.error("Failed to load dashboard data");
@@ -68,7 +74,7 @@ const AdminDashboard = () => {
               <p className="text-gray-600 mt-1">Welcome back, {user?.name}</p>
             </div>
             <button
-              onClick={fetchDashboardData}
+              onClick={() => fetchDashboardData(orderPage)}
               className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
             >
               <FiRefreshCw className="h-4 w-4 text-gray-600" />
@@ -93,7 +99,11 @@ const AdminDashboard = () => {
 
           {/* Recent Orders */}
           <div>
-            <RecentOrders orders={recentOrders} />
+            <RecentOrders
+              orders={recentOrders}
+              pagination={orderPagination}
+              onPageChange={setOrderPage}
+            />
           </div>
         </div>
       </div>

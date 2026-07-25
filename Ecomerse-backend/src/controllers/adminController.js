@@ -106,27 +106,43 @@ exports.sendBroadcastEmail = async (req, res) => {
 
 exports.getStats = async (req, res) => {
   try {
+    const requestedPage = Math.max(1, parseInt(req.query.page || 1, 10));
+    const requestedLimit = Math.min(20, Math.max(1, parseInt(req.query.limit || 5, 10)));
+
     const totalUsers = await User.count();
     const totalOrders = await Order.count();
     const totalProducts = await Product.count();
-    
+
     const orders = await Order.findAll();
     const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
-    
-    // Get recent orders
+
     const recentOrders = await Order.findAll({
       include: [{
         model: User,
-        attributes: ['name', 'email']
+        attributes: ['id', 'name', 'email']
       }],
+      order: [['createdAt', 'DESC']],
+      limit: requestedLimit,
+      offset: (requestedPage - 1) * requestedLimit
+    });
+
+    const totalPages = Math.max(1, Math.ceil(totalOrders / requestedLimit));
+
+    const products = await Product.findAll({
       order: [['createdAt', 'DESC']],
       limit: 5
     });
 
-    // Get top products 
-    const products = await Product.findAll({
-      order: [['createdAt', 'DESC']],
-      limit: 5
+    const transformedRecentOrders = recentOrders.map((order) => {
+      const orderData = order.toJSON();
+      return {
+        ...orderData,
+        user: orderData.User ? {
+          id: orderData.User.id,
+          name: orderData.User.name,
+          email: orderData.User.email
+        } : null
+      };
     });
 
     res.json({
@@ -136,8 +152,16 @@ exports.getStats = async (req, res) => {
         totalProducts,
         totalRevenue
       },
-      recentOrders,
-      topProducts: products
+      recentOrders: transformedRecentOrders,
+      topProducts: products,
+      pagination: {
+        page: requestedPage,
+        limit: requestedLimit,
+        totalOrders,
+        totalPages,
+        hasNextPage: requestedPage < totalPages,
+        hasPreviousPage: requestedPage > 1
+      }
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

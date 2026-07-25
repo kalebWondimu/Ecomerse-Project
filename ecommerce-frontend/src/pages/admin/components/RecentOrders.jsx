@@ -1,8 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
-const RecentOrders = ({ orders }) => {
+const RecentOrders = ({ orders, pagination, onPageChange }) => {
   const getStatusColor = (status) => {
     const colors = {
       pending: "bg-yellow-100 text-yellow-800",
@@ -26,16 +26,31 @@ const RecentOrders = ({ orders }) => {
 
   if (!orders || orders.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-8 text-center">
-        <p className="text-gray-500">No recent orders</p>
+      <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-lg font-medium text-slate-700">No recent orders</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Orders will appear here once customers start purchasing.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b">
-        <h3 className="text-lg font-semibold">Recent Orders</h3>
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-900">
+            Recent Orders
+          </h3>
+          <p className="text-sm text-slate-500">
+            A paginated view of the latest customer purchases.
+          </p>
+        </div>
+        {pagination && (
+          <div className="text-sm text-slate-500">
+            Showing page {pagination.page} of {pagination.totalPages}
+          </div>
+        )}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -62,7 +77,7 @@ const RecentOrders = ({ orders }) => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {orders.slice(0, 5).map((order) => (
+            {orders.map((order) => (
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   #ORD-{order.id}
@@ -97,13 +112,36 @@ const RecentOrders = ({ orders }) => {
           </tbody>
         </table>
       </div>
-      <div className="px-6 py-4 border-t">
+      <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           to="/admin/orders"
-          className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+          className="text-sm font-medium text-primary-600 hover:text-primary-700"
         >
           View All Orders →
         </Link>
+        {pagination && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange?.(Math.max(1, pagination.page - 1))}
+              disabled={!pagination.hasPreviousPage}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FiChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
+            <span className="text-sm font-medium text-slate-600">
+              {pagination.page} / {pagination.totalPages}
+            </span>
+            <button
+              onClick={() => onPageChange?.(pagination.page + 1)}
+              disabled={!pagination.hasNextPage}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+              <FiChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
