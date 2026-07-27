@@ -1,4 +1,4 @@
-const { Product, Review, StoreSettings } = require('../models');
+const { Product, Review, StoreSettings, Order } = require('../models');
 const { Op, Sequelize } = require('sequelize');
 const { sequelize } = require('../config/postgres');
 
@@ -181,6 +181,19 @@ exports.deleteProduct = async (req, res) => {
     const product = await Product.findByPk(req.params.id);
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
+    }
+
+    const relatedOrderCount = await Order.count({
+      where: sequelize.literal(
+        `items @> '${JSON.stringify([{ productId: product.id }])}'::jsonb`,
+      ),
+    });
+
+    if (relatedOrderCount > 0) {
+      return res.status(400).json({
+        message:
+          'Cannot delete this product because it is associated with existing orders. Archive or deactivate it instead.',
+      });
     }
     
     // Soft delete - just mark as inactive

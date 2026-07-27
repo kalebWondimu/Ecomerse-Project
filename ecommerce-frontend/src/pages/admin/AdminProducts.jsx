@@ -23,6 +23,8 @@ const AdminProducts = () => {
   const { settings: storeSettings } = useStoreSettings();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetching, setFetching] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -58,22 +60,17 @@ const AdminProducts = () => {
     fetchProducts(1);
   }, []);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentPage(1);
-      fetchProducts(1);
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const fetchProducts = async (page = 1) => {
+  const fetchProducts = async (page = 1, term = searchTerm) => {
     try {
-      setLoading(true);
+      if (!products.length) {
+        setLoading(true);
+      } else {
+        setFetching(true);
+      }
       const payload = await productService.getProducts({
         page,
         limit: pageSize,
-        search: searchTerm.trim() || undefined,
+        search: term.trim() || undefined,
       });
       const nextProducts = Array.isArray(payload?.products)
         ? payload.products
@@ -99,8 +96,27 @@ const AdminProducts = () => {
       toast.error("Failed to load products");
     } finally {
       setLoading(false);
+      setFetching(false);
     }
   };
+
+  useEffect(() => {
+    const trimmedSearch = searchInput.trim();
+    if (trimmedSearch === searchTerm) {
+      return undefined;
+    }
+
+    const debounceTimer = setTimeout(() => {
+      setCurrentPage(1);
+      setSearchTerm(trimmedSearch);
+    }, 500);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchInput, searchTerm]);
+
+  useEffect(() => {
+    fetchProducts(1, searchTerm);
+  }, [searchTerm]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -280,7 +296,7 @@ const AdminProducts = () => {
     ];
   };
 
-  if (loading) {
+  if (loading && !products.length) {
     return (
       <div className="flex h-screen bg-gray-50">
         <AdminSidebar />
@@ -322,63 +338,37 @@ const AdminProducts = () => {
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="relative flex-1">
                 <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search products by name, description or category..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-field pl-10"
-                />
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    const trimmedSearch = searchInput.trim();
+                    setCurrentPage(1);
+                    if (trimmedSearch === searchTerm) {
+                      await fetchProducts(1, trimmedSearch);
+                      return;
+                    }
+                    setSearchTerm(trimmedSearch);
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Search products by name, description or category..."
+                      value={searchInput}
+                      onChange={(e) => setSearchInput(e.target.value)}
+                      className="input-field pl-10"
+                    />
+                    <button type="submit" className="btn-primary h-11 px-5">
+                      Search
+                    </button>
+                  </div>
+                </form>
               </div>
               <div className="rounded-full bg-slate-100 px-3 py-2 text-sm text-slate-600">
                 {totalCount} product{totalCount === 1 ? "" : "s"} total
               </div>
             </div>
           </div>
-
-          {totalPages > 1 && (
-            <div className="mb-6 flex flex-wrap items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div className="text-sm text-slate-600">
-                Showing page {currentPage} of {totalPages}
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => fetchProducts(Math.max(1, currentPage - 1))}
-                  disabled={currentPage === 1}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Previous
-                </button>
-                {getVisiblePages().map((page, index) =>
-                  page === "ellipsis" ? (
-                    <span
-                      key={`ellipsis-${index}`}
-                      className="px-2 text-slate-400"
-                    >
-                      …
-                    </span>
-                  ) : (
-                    <button
-                      key={page}
-                      onClick={() => fetchProducts(page)}
-                      className={`rounded-lg px-3 py-2 text-sm transition ${currentPage === page ? "bg-primary-600 text-white shadow-sm" : "border border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"}`}
-                    >
-                      {page}
-                    </button>
-                  ),
-                )}
-                <button
-                  onClick={() =>
-                    fetchProducts(Math.min(totalPages, currentPage + 1))
-                  }
-                  disabled={currentPage === totalPages}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Products Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -487,6 +477,50 @@ const AdminProducts = () => {
               </div>
             )}
           </div>
+
+          {totalPages > 1 && (
+            <div className="mt-6 flex flex-wrap items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <div className="text-sm text-slate-600">
+                Showing page {currentPage} of {totalPages}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => fetchProducts(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                {getVisiblePages().map((page, index) =>
+                  page === "ellipsis" ? (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="px-2 text-slate-400"
+                    >
+                      …
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => fetchProducts(page)}
+                      className={`rounded-lg px-3 py-2 text-sm transition ${currentPage === page ? "bg-primary-600 text-white shadow-sm" : "border border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"}`}
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() =>
+                    fetchProducts(Math.min(totalPages, currentPage + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
