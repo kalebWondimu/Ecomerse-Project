@@ -15,7 +15,14 @@ const adminService = {
   getAllProducts: async () => {
     try {
       const response = await api.get('/products');
-      return response.data;
+      const payload = response.data;
+      if (payload && Array.isArray(payload.products)) {
+        return payload.products;
+      }
+      if (Array.isArray(payload)) {
+        return payload;
+      }
+      return [];
     } catch (error) {
       console.error('Error fetching products:', error);
       throw error;

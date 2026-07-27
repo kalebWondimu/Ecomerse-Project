@@ -65,6 +65,9 @@ const AdminOrders = () => {
   };
 
   const handleStatusUpdate = async (orderId, newStatus) => {
+    const order = orders.find((order) => order.id === orderId);
+    if (!order || order.status === newStatus) return;
+
     try {
       setUpdatingStatus(true);
       await adminService.updateOrderStatus(orderId, newStatus);
@@ -82,7 +85,9 @@ const AdminOrders = () => {
 
       toast.success(`Order #ORD-${orderId} status updated to ${newStatus}`);
     } catch (error) {
-      toast.error("Failed to update order status");
+      const message =
+        error.response?.data?.message || "Failed to update order status";
+      toast.error(message);
     } finally {
       setUpdatingStatus(false);
     }
@@ -405,19 +410,25 @@ const AdminOrders = () => {
                           <div className="flex items-center gap-2">
                             {getStatusIcon(order.status)}
                             <select
-                              key={`status-${order.id}-${order.status}`}
-                              defaultValue={order.status || "pending"}
+                              value={order.status || "pending"}
                               onChange={(e) =>
                                 handleStatusUpdate(order.id, e.target.value)
                               }
                               disabled={updatingStatus}
                               className={`text-xs rounded-full px-2 py-1 border-0 ${getStatusColor(order.status)}`}
                             >
-                              <option value="pending">Pending</option>
-                              <option value="processing">Processing</option>
-                              <option value="shipped">Shipped</option>
-                              <option value="delivered">Delivered</option>
-                              <option value="cancelled">Cancelled</option>
+                              <option value={order.status || "pending"}>
+                                {order.status
+                                  ? order.status.charAt(0).toUpperCase() +
+                                    order.status.slice(1)
+                                  : "Pending"}
+                              </option>
+                              {getStatusOptions(order.status).map((status) => (
+                                <option key={status} value={status}>
+                                  {status.charAt(0).toUpperCase() +
+                                    status.slice(1)}
+                                </option>
+                              ))}
                             </select>
                           </div>
                         </td>
@@ -600,27 +611,25 @@ const AdminOrders = () => {
               {/* Status Update */}
               <div className="mt-4 flex gap-2">
                 <select
-                  value={selectedOrder.status || "pending"}
+                  value={""}
                   onChange={(e) =>
                     handleStatusUpdate(selectedOrder.id, e.target.value)
                   }
                   disabled={getStatusOptions(selectedOrder.status).length === 0}
                   className="input-field flex-1"
                 >
-                  {getStatusOptions(selectedOrder.status).length > 0 ? (
-                    getStatusOptions(selectedOrder.status).map((status) => (
-                      <option key={status} value={status}>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </option>
-                    ))
-                  ) : (
-                    <option value={selectedOrder.status || "pending"}>
-                      {selectedOrder.status
-                        ? selectedOrder.status.charAt(0).toUpperCase() +
-                          selectedOrder.status.slice(1)
-                        : "Pending"}
+                  <option value="" disabled>
+                    Change status from{" "}
+                    {selectedOrder.status
+                      ? selectedOrder.status.charAt(0).toUpperCase() +
+                        selectedOrder.status.slice(1)
+                      : "Pending"}
+                  </option>
+                  {getStatusOptions(selectedOrder.status).map((status) => (
+                    <option key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1)}
                     </option>
-                  )}
+                  ))}
                 </select>
                 <button
                   onClick={() => setShowDetailsModal(false)}

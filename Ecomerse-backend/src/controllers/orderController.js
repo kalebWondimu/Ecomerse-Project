@@ -127,8 +127,8 @@ exports.updateOrderStatus = async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    const previousStatus = order.status?.toLowerCase();
-    const nextStatus = req.body.status?.toLowerCase();
+    const previousStatus = (order.status || 'pending').toString().toLowerCase();
+    const nextStatus = req.body.status?.toString().toLowerCase();
     const allowedTransitions = {
       pending: ['processing', 'cancelled'],
       processing: ['shipped', 'cancelled'],
@@ -137,12 +137,20 @@ exports.updateOrderStatus = async (req, res) => {
       cancelled: [],
     };
 
-    if (nextStatus && !allowedTransitions[previousStatus]?.includes(nextStatus)) {
+    if (!nextStatus) {
+      return res.status(400).json({ message: 'A target status is required.' });
+    }
+
+    if (!Object.keys(allowedTransitions).includes(nextStatus)) {
+      return res.status(400).json({ message: 'Invalid status provided.' });
+    }
+
+    if (!allowedTransitions[previousStatus]?.includes(nextStatus)) {
       return res.status(400).json({ message: 'This status change is not allowed for the current order state.' });
     }
 
-    const previousStatusText = previousStatus || 'pending';
-    const nextStatusText = nextStatus || previousStatusText;
+    const previousStatusText = previousStatus;
+    const nextStatusText = nextStatus;
 
     if (nextStatusText === 'cancelled' && previousStatusText === 'delivered') {
       return res.status(400).json({ message: 'A delivered order cannot be cancelled.' });

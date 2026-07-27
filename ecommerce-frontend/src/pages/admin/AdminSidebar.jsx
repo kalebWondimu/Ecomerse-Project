@@ -30,7 +30,7 @@ const AdminSidebar = () => {
         <p className="text-xs text-gray-500 mt-1">Store Management</p>
       </div>
 
-      <nav className="mt-6">
+      <nav className="mt-6 relative">
         {navItems.map((item) => (
           <NavLink
             key={item.path}

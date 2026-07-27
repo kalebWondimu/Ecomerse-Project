@@ -36,15 +36,12 @@ const RecentOrders = ({ orders, pagination, onPageChange }) => {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-col gap-2 border-b border-slate-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+      <div className="flex flex-col gap-2 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">
             Recent Orders
           </h3>
-          <p className="text-sm text-slate-500">
-            A paginated view of the latest customer purchases.
-          </p>
         </div>
         {pagination && (
           <div className="text-sm text-slate-500">
@@ -112,7 +109,7 @@ const RecentOrders = ({ orders, pagination, onPageChange }) => {
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           to="/admin/orders"
           className="text-sm font-medium text-primary-600 hover:text-primary-700"
@@ -120,7 +117,7 @@ const RecentOrders = ({ orders, pagination, onPageChange }) => {
           View All Orders →
         </Link>
         {pagination && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => onPageChange?.(Math.max(1, pagination.page - 1))}
               disabled={!pagination.hasPreviousPage}
@@ -129,9 +126,22 @@ const RecentOrders = ({ orders, pagination, onPageChange }) => {
               <FiChevronLeft className="h-4 w-4" />
               Previous
             </button>
-            <span className="text-sm font-medium text-slate-600">
-              {pagination.page} / {pagination.totalPages}
-            </span>
+            {Array.from(
+              { length: pagination.totalPages },
+              (_, index) => index + 1,
+            ).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                onClick={() => onPageChange?.(pageNumber)}
+                className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm transition ${
+                  pagination.page === pageNumber
+                    ? "bg-primary-600 text-white border-primary-600"
+                    : "border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"
+                }`}
+              >
+                {pageNumber}
+              </button>
+            ))}
             <button
               onClick={() => onPageChange?.(pagination.page + 1)}
               disabled={!pagination.hasNextPage}

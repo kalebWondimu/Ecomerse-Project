@@ -173,6 +173,9 @@ const AdminAnalytics = () => {
       const totalOrders = recentOrders.length;
       const conversionRate =
         totalCustomers > 0 ? (totalOrders / totalCustomers) * 100 : 0;
+      const formatGrowth = (value) =>
+        Number.isFinite(value) ? Number(value.toFixed(1)) : 0;
+
       const revenueGrowth =
         revenueData.length > 1
           ? ((revenueData[revenueData.length - 1].revenue -
@@ -180,32 +183,40 @@ const AdminAnalytics = () => {
               Math.max(revenueData[0].revenue, 1)) *
             100
           : 0;
+      const calculateGrowth = (firstValue, lastValue) => {
+        if (!Number.isFinite(firstValue) || !Number.isFinite(lastValue)) {
+          return 0;
+        }
+        if (firstValue === 0) {
+          return lastValue === 0 ? 0 : 100;
+        }
+        return ((lastValue - firstValue) / Math.abs(firstValue)) * 100;
+      };
+
       const ordersGrowth =
         revenueData.length > 1
-          ? ((revenueData[revenueData.length - 1].orders -
-              revenueData[0].orders) /
-              Math.max(revenueData[0].orders, 1)) *
-            100
+          ? calculateGrowth(
+              revenueData[0].orders,
+              revenueData[revenueData.length - 1].orders,
+            )
           : 0;
       const customerGrowth =
-        totalCustomers > 0
-          ? (createdToday / Math.max(totalCustomers, 1)) * 100
-          : 0;
+        totalCustomers > 0 ? calculateGrowth(createdToday, totalCustomers) : 0;
 
       setAnalytics({
         revenue: {
           total: totalRevenue,
-          growth: revenueGrowth,
+          growth: formatGrowth(revenueGrowth),
           data: revenueData,
         },
         orders: {
           total: totalOrders,
-          growth: ordersGrowth,
+          growth: formatGrowth(ordersGrowth),
           data: revenueData,
         },
         customers: {
           total: totalCustomers,
-          growth: customerGrowth,
+          growth: formatGrowth(customerGrowth),
           data: [],
         },
         products: {

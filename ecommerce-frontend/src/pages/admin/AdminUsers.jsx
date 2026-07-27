@@ -125,9 +125,9 @@ const AdminUsers = () => {
     }
   };
 
-  const handleToggleUserStatus = async (userId, currentStatus) => {
+  const handleToggleUserStatus = async (userId, isCurrentlyActive) => {
     try {
-      const nextStatus = currentStatus ? "active" : "disabled";
+      const nextStatus = isCurrentlyActive ? "disabled" : "active";
       await adminService.updateUserStatus?.(userId, nextStatus);
 
       setUsers((prevUsers) =>
@@ -137,6 +137,10 @@ const AdminUsers = () => {
             : user,
         ),
       );
+
+      if (selectedUser?.id === userId) {
+        setSelectedUser({ ...selectedUser, isActive: nextStatus === "active" });
+      }
 
       toast.success(
         `User ${nextStatus === "active" ? "enabled" : "disabled"} successfully`,
@@ -427,7 +431,11 @@ const AdminUsers = () => {
                                 user.isActive !== false,
                               )
                             }
-                            className="text-red-600 hover:text-red-900"
+                            className={`font-medium ${
+                              user.isActive === false
+                                ? "text-green-600 hover:text-green-900"
+                                : "text-red-600 hover:text-red-900"
+                            }`}
                           >
                             {user.isActive === false ? "Enable" : "Disable"}
                           </button>
@@ -632,11 +640,18 @@ const AdminUsers = () => {
                     </div>
                     <button
                       onClick={() =>
-                        handleToggleUserStatus(selectedUser.id, true)
+                        handleToggleUserStatus(
+                          selectedUser.id,
+                          selectedUser.isActive !== false,
+                        )
                       }
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                      className={`px-4 py-2 rounded-lg text-white ${
+                        selectedUser.isActive === false
+                          ? "bg-emerald-600 hover:bg-emerald-700"
+                          : "bg-red-600 hover:bg-red-700"
+                      }`}
                     >
-                      Disable
+                      {selectedUser.isActive === false ? "Enable" : "Disable"}
                     </button>
                   </div>
                 </div>
