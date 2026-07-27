@@ -117,7 +117,11 @@ exports.getStats = async (req, res) => {
     const orders = await Order.findAll();
     const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
+    const processingOrdersWhere = { status: 'processing' };
+    const processingOrdersCount = await Order.count({ where: processingOrdersWhere });
+
     const recentOrders = await Order.findAll({
+      where: processingOrdersWhere,
       include: [{
         model: User,
         attributes: ['id', 'name', 'email']
@@ -127,7 +131,7 @@ exports.getStats = async (req, res) => {
       offset: (requestedPage - 1) * requestedLimit
     });
 
-    const totalPages = Math.max(1, Math.ceil(totalOrders / requestedLimit));
+    const totalPages = Math.max(1, Math.ceil(processingOrdersCount / requestedLimit));
 
     const products = await Product.findAll({
       order: [['createdAt', 'DESC']],
@@ -158,7 +162,7 @@ exports.getStats = async (req, res) => {
       pagination: {
         page: requestedPage,
         limit: requestedLimit,
-        totalOrders,
+        totalOrders: processingOrdersCount,
         totalPages,
         hasNextPage: requestedPage < totalPages,
         hasPreviousPage: requestedPage > 1

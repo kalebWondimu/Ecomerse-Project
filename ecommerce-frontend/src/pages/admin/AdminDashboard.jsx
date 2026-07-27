@@ -30,7 +30,9 @@ const AdminDashboard = () => {
 
   const fetchDashboardData = async (page = 1) => {
     try {
-      setLoading(true);
+      if (page === 1) {
+        setLoading(true);
+      }
       const dashboardData = await adminService.getDashboardStats({
         page,
         limit: 6,
@@ -43,7 +45,9 @@ const AdminDashboard = () => {
       console.error("Failed to fetch dashboard data:", error);
       toast.error("Failed to load dashboard data");
     } finally {
-      setLoading(false);
+      if (page === 1) {
+        setLoading(false);
+      }
     }
   };
 

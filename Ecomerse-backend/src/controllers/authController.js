@@ -92,6 +92,10 @@ exports.login = async (req, res) => {
       return res.status(403).json({ message: `Account locked. Try again after ${lockoutMinutes} minutes.` });
     }
 
+    if (user.isActive === false) {
+      return res.status(403).json({ message: 'Your account has been disabled. Please contact support.' });
+    }
+
     if (user && (await user.matchPassword(password))) {
       user.failedLoginAttempts = 0;
       user.lockedUntil = null;

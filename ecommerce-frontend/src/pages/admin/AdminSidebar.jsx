@@ -24,13 +24,13 @@ const AdminSidebar = () => {
   ];
 
   return (
-    <aside className="w-64 bg-white shadow-sm h-screen sticky top-0">
+    <aside className="flex h-screen w-64 flex-col bg-white shadow-sm sticky top-0">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-primary-600">Admin Panel</h2>
         <p className="text-xs text-gray-500 mt-1">Store Management</p>
       </div>
 
-      <nav className="mt-6 relative">
+      <nav className="mt-6 flex-1">
         {navItems.map((item) => (
           <NavLink
             key={item.path}
@@ -51,7 +51,7 @@ const AdminSidebar = () => {
 
         <button
           onClick={logout}
-          className="w-full flex items-center px-6 py-3 text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors mt-auto absolute bottom-6"
+          className="mt-6 flex w-full items-center border-t border-slate-200 px-6 py-4 text-gray-700 transition-colors hover:bg-red-50 hover:text-red-600"
         >
           <FiLogOut className="h-5 w-5 mr-3" />
           <span className="text-sm font-medium">Logout</span>

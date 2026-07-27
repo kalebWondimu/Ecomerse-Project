@@ -20,6 +20,7 @@ import { useStoreSettings } from "../../context/StoreSettingsContext";
 import { formatCurrency, normalizeCurrencyCode } from "../../utils/currency";
 
 const AdminProducts = () => {
+  const { settings: storeSettings } = useStoreSettings();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,7 +53,6 @@ const AdminProducts = () => {
   });
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { settings: storeSettings } = useStoreSettings();
 
   useEffect(() => {
     fetchProducts(1);

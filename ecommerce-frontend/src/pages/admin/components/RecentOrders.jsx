@@ -3,6 +3,25 @@ import { Link } from "react-router-dom";
 import { FiEye, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
 const RecentOrders = ({ orders, pagination, onPageChange }) => {
+  const getVisiblePages = () => {
+    if (!pagination) return [];
+    const totalPages = Math.max(1, Number(pagination.totalPages || 1));
+
+    if (totalPages <= 5) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
+
+    if (pagination.page <= 3) {
+      return [1, 2, 3, 4, "ellipsis", totalPages];
+    }
+
+    if (pagination.page >= totalPages - 2) {
+      return [1, "ellipsis", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+
+    return [1, "ellipsis", pagination.page - 1, pagination.page, pagination.page + 1, "ellipsis", totalPages];
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending: "bg-yellow-100 text-yellow-800",
@@ -126,22 +145,25 @@ const RecentOrders = ({ orders, pagination, onPageChange }) => {
               <FiChevronLeft className="h-4 w-4" />
               Previous
             </button>
-            {Array.from(
-              { length: pagination.totalPages },
-              (_, index) => index + 1,
-            ).map((pageNumber) => (
-              <button
-                key={pageNumber}
-                onClick={() => onPageChange?.(pageNumber)}
-                className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm transition ${
-                  pagination.page === pageNumber
-                    ? "bg-primary-600 text-white border-primary-600"
-                    : "border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"
-                }`}
-              >
-                {pageNumber}
-              </button>
-            ))}
+            {getVisiblePages().map((pageNumber, index) =>
+              pageNumber === "ellipsis" ? (
+                <span key={`ellipsis-${index}`} className="px-2 text-slate-400">
+                  …
+                </span>
+              ) : (
+                <button
+                  key={pageNumber}
+                  onClick={() => onPageChange?.(pageNumber)}
+                  className={`inline-flex items-center justify-center rounded-lg border px-3 py-2 text-sm transition ${
+                    pagination.page === pageNumber
+                      ? "bg-primary-600 text-white border-primary-600"
+                      : "border-slate-300 text-slate-700 hover:border-primary-500 hover:text-primary-600"
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              ),
+            )}
             <button
               onClick={() => onPageChange?.(pagination.page + 1)}
               disabled={!pagination.hasNextPage}
