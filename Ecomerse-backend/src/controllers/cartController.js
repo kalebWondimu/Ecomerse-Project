@@ -167,6 +167,8 @@ exports.addItem = async (req, res) => {
         totalPrice += item.quantity * prod.price;
       }
     }
+    // Ensure we have the store currency for the response
+    const storeCurrency = await getStoreCurrency();
     
     // Update cart in database
     await sequelize.query(

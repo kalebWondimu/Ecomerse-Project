@@ -143,7 +143,13 @@ export const CartProvider = ({ children }) => {
       return true;
     } catch (error) {
       console.error("Add to cart error:", error);
-      showCartToast("error", "Failed to add item to cart");
+      // If server responded with an error, the API interceptor already
+      // displayed a toast (e.g. 500 / server error). Only show the generic
+      // cart failure toast for network/client errors where no server
+      // response is present.
+      if (!error.response) {
+        showCartToast("error", "Failed to add item to cart");
+      }
       return false;
     } finally {
       setLoading(false);
