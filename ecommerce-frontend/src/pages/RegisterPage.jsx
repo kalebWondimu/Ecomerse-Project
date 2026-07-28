@@ -290,9 +290,6 @@ const RegisterPage = () => {
                       disabled={loading}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Format: 123-456-7890 or (123) 456-7890
-                  </p>
                 </div>
 
                 {/* Password Field */}

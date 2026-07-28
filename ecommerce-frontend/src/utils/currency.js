@@ -15,7 +15,7 @@ const CURRENCY_SYMBOLS = {
   USD: "$",
   EUR: "€",
   GBP: "£",
-  ETB: "Br",
+  ETB: "birr",
   INR: "₹",
   JPY: "¥",
   CAD: "C$",
@@ -66,6 +66,10 @@ export const formatCurrency = (amount, currency, options = {}) => {
     minimumFractionDigits,
     maximumFractionDigits,
   });
+
+  if (code === "ETB") {
+    return `${formattedAmount}${symbol}`;
+  }
 
   return `${symbol} ${formattedAmount}`;
 };
